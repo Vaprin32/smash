@@ -192,7 +192,7 @@ export class CharSelectScreen implements Screen {
   private deviceLine(slot: number): string {
     if (this.mode === 'training' && slot === 1) return 'Stands still · chosen by P1';
     const pads = this.app.controls.padsOf(slot).map((n) => `Pad ${n}`);
-    const keys = slot === 0 ? 'Keys: WASD + J K I ; L N' : 'Keys: arrows + numpad';
+    const keys = slot === 0 ? 'Keys: WASD + E J K I L N' : 'Keys: arrows + numpad';
     return [keys, ...pads].join(' · ');
   }
 }

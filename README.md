@@ -38,9 +38,9 @@ plus that fighter's hand-written specials. Looks (proportions, colors, accessory
 | Move | W A S D | arrows | left stick / d-pad |
 | Jump | L or Space | Numpad 3 | X / Y |
 | Attack | J | Numpad 1 | A |
-| Smash (specials in the air) | K | Numpad 2 | RB |
+| Smash (ground only) | K | Numpad 2 | RB |
 | Special | I | Numpad 5 | B |
-| Shield / roll / dodge / grab | ; | Numpad 0 | LT / RT |
+| Shield / roll / dodge / grab | E | Numpad 0 | LT / RT |
 | Dash | N | Numpad 4 | LB |
 
 Attack: jab combo, tilts, dash attack on the ground; aerials in the air. Smash: forward / up / down

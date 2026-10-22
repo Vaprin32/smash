@@ -110,7 +110,7 @@ const moves: Record<number, MoveDef> = {
     hitboxes: [hitbox({ frames: [8, 11], x: 4, y: 6, r: 20, damage: 10, kb: 4, growth: 11, angle: 270 })],
   },
 
-  // --- Specials (I anywhere; K in the air) ---
+  // --- Specials (I) ---
   [MoveId.NSpecial]: {
     name: 'Wind Bolt',
     total: 32,

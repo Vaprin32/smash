@@ -233,12 +233,23 @@ describe('specials and aerials', () => {
     expect(launch).toBeGreaterThan(Math.abs(ftilt.fighters[1]!.vx));
   });
 
-  it('K in the air does specials', () => {
+  it('K in the air does nothing, but K just before landing comes out as a smash', () => {
     const s0 = duel(300);
     s0.fighters[0]!.x = 0;
     let s = run(s0, 8, Btn.Jump);
     s = run(s, 1, Btn.Heavy);
-    expect(s.fighters[0]!.move).toBe(MoveId.NSpecial);
+    expect(s.fighters[0]!.action).toBe(Action.Air);
+
+    // Short hop: find the landing frame, then press K one frame before it.
+    let landedAt = -1;
+    run(run(s0, 1, Btn.Jump), 80, 0, 0, (n) => {
+      if (landedAt < 0 && n.fighters[0]!.action === Action.Landing) landedAt = n.frame;
+    });
+    let r = run(s0, 1, Btn.Jump);
+    r = run(r, landedAt - 3, 0);
+    expect(r.fighters[0]!.ground).toBe(-1);
+    r = run(r, 2 + wisp.stats.landingLag + 1, (i) => (i === 0 ? Btn.Heavy : 0));
+    expect(r.fighters[0]!.move).toBe(MoveId.FSmash);
   });
 
   it('landing mid-aerial uses the move landing lag', () => {

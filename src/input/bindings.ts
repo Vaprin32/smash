@@ -8,7 +8,7 @@ export interface PlayerKeys {
   down: string[];
   jump: string[];
   attack: string[];
-  /** Smash attacks on the ground, specials in the air. */
+  /** Smash attacks (ground only). */
   heavy: string[];
   special: string[];
   /** Shield (hold) / roll / spot dodge / air dodge. */
@@ -29,7 +29,7 @@ export const BINDINGS = {
       attack: ['KeyJ'],
       heavy: ['KeyK'],
       special: ['KeyI'],
-      dodge: ['Semicolon'],
+      dodge: ['KeyE'],
       dash: ['KeyN'],
     },
     {

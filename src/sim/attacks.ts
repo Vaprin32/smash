@@ -3,9 +3,9 @@
 // Input layout (Smash Ultimate style):
 //   J ground: jab combo / side, up, down tilt / dash attack (while dashing or running)
 //   J air:    neutral / forward / back / up / down air (back air keeps facing)
-//   K ground: forward / up / down smash (hold K to charge)
-//   K air and I anywhere: neutral / side / up / down special
-//   Shield (;) + J: grab. While holding: J pummel, a direction throws that way.
+//   K ground: forward / up / down smash (hold K to charge); nothing in the air
+//   I anywhere: neutral / side / up / down special
+//   Shield (E) + J: grab. While holding: J pummel, a direction throws that way.
 
 import { Action, setAction } from './actions';
 import { approach } from './fixed';
@@ -34,6 +34,9 @@ export function tryStartAction(
   grounded: boolean,
 ): boolean {
   if (f.actBufferTimer === 0) return false;
+  // Smash attacks are ground-only. In the air the press stays buffered, so
+  // it still comes out if the fighter lands within the buffer window.
+  if (f.actBuffer === Btn.Heavy && !grounded) return false;
   const btn = f.actBuffer;
   f.actBuffer = 0;
   f.actBufferTimer = 0;
@@ -62,7 +65,6 @@ export function tryStartAction(
   }
 
   if (btn === Btn.Heavy) {
-    if (!grounded) return startSpecial(f, up, down, dirX, def, grounded);
     if (up) startMove(f, MoveId.USmash);
     else if (down) startMove(f, MoveId.DSmash);
     else startMove(f, MoveId.FSmash, dirX);

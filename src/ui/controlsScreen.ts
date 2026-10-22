@@ -43,7 +43,7 @@ function rows(): Row[] {
     ['Move', dirs(a), dirs(b), 'Left stick / D-pad', 'Walk, hold to run · down: drop / fast-fall'],
     ['Jump', keys(a.jump), keys(b.jump), pad(g.jump), 'Tap: short hop · hold: full hop · again in air'],
     ['Attack', keys(a.attack), keys(b.attack), pad(g.attack), 'Jab, tilts, dash attack · aerials in the air'],
-    ['Smash', keys(a.heavy), keys(b.heavy), pad(g.heavy), 'Smash attacks (hold to charge) · specials in air'],
+    ['Smash', keys(a.heavy), keys(b.heavy), pad(g.heavy), 'Smash attacks (hold to charge) · ground only'],
     ['Special', keys(a.special), keys(b.special), pad(g.special), 'Neutral / side / up (recovery) / down special'],
     ['Shield', keys(a.dodge), keys(b.dodge), pad(g.dodge), 'Hold: shield · +side: roll · +down: dodge · +attack: grab'],
     ['Dash', keys(a.dash), keys(b.dash), pad(g.dash), 'Quick burst along the ground'],

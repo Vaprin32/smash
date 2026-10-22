@@ -72,14 +72,22 @@ describe('input → move table (Smash Ultimate layout)', () => {
     ['J + back', Btn.Attack | Btn.Left, MoveId.BAir],
     ['J + up', Btn.Attack | Btn.Up, MoveId.UAir],
     ['J + down', Btn.Attack | Btn.Down, MoveId.DAir],
-    ['K', Btn.Heavy, MoveId.NSpecial],
-    ['K + up', Btn.Heavy | Btn.Up, MoveId.UpSpecial],
-    ['K + down', Btn.Heavy | Btn.Down, MoveId.DownSpecial],
-    ['K + side', Btn.Heavy | Btn.Right, MoveId.SideSpecial],
+    ['I', Btn.Special, MoveId.NSpecial],
     ['I + up', Btn.Special | Btn.Up, MoveId.UpSpecial],
+    ['I + down', Btn.Special | Btn.Down, MoveId.DownSpecial],
+    ['I + side', Btn.Special | Btn.Right, MoveId.SideSpecial],
   ];
   for (const [name, input, move] of air) {
     it(`air ${name}`, () => expect(moveAfter(airborne(), input)).toBe(move));
+  }
+
+  for (const [name, input] of [
+    ['K', Btn.Heavy],
+    ['K + up', Btn.Heavy | Btn.Up],
+    ['K + down', Btn.Heavy | Btn.Down],
+    ['K + side', Btn.Heavy | Btn.Right],
+  ] as const) {
+    it(`air ${name} does nothing (smashes are ground-only)`, () => expect(moveAfter(airborne(), input)).toBe(-1));
   }
 
   it('J while running is a dash attack', () => {

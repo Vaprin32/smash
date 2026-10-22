@@ -9,7 +9,7 @@ export const Btn = {
   Down: 1 << 3,
   Jump: 1 << 4,
   Attack: 1 << 5,
-  /** Smash attacks on the ground; specials in the air. */
+  /** Smash attacks (ground only). */
   Heavy: 1 << 6,
   /** Shield on the ground (hold), air dodge in the air. */
   Dodge: 1 << 7,
