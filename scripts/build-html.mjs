@@ -2,7 +2,11 @@
 // straight from disk via file://, no server needed.
 
 import { mkdirSync, writeFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { build } from 'vite';
+
+// Work from the project root whatever directory this was started in.
+process.chdir(fileURLToPath(new URL('..', import.meta.url)));
 
 const result = await build({
   logLevel: 'warn',
