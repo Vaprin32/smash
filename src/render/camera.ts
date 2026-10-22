@@ -18,6 +18,8 @@ export class Camera {
   private initialized = false;
 
   update(state: MatchState, viewW: number, viewH: number): void {
+    // A zero-size canvas (page loaded hidden) would make zoom NaN, and smoothing would keep it NaN forever.
+    if (viewW <= 0 || viewH <= 0) return;
     const stage = STAGES[state.stageId]!;
     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
     const include = (x: number, y: number) => {

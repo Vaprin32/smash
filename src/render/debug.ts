@@ -47,8 +47,8 @@ export function drawDebugWorld(ctx: CanvasRenderingContext2D, state: MatchState,
   }
 }
 
-export function drawDebugText(ctx: CanvasRenderingContext2D, state: MatchState, info: DebugInfo): void {
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
+export function drawDebugText(ctx: CanvasRenderingContext2D, state: MatchState, info: DebugInfo, scale: number): void {
+  ctx.setTransform(scale, 0, 0, scale, 0, 0);
   const lines = [
     `frame ${state.frame}   render ${info.renderFps} fps   sim ${info.simFps} fps`,
     `hash 0x${hashState(state).toString(16).padStart(8, '0')}   rng 0x${(state.rng >>> 0).toString(16)}`,

@@ -3,8 +3,10 @@ import { FIGHTERS } from '../sim/fighters';
 import type { MatchState } from '../sim/state';
 import { FIGHTER_COLORS } from './renderer';
 
-export function drawHud(ctx: CanvasRenderingContext2D, state: MatchState, w: number, h: number): void {
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
+/** `scale` is device pixels per CSS pixel, so text stays readable on high-DPI screens. */
+export function drawHud(ctx: CanvasRenderingContext2D, state: MatchState, viewW: number, viewH: number, scale: number): void {
+  ctx.setTransform(scale, 0, 0, scale, 0, 0);
+  const w = viewW / scale, h = viewH / scale;
   const n = state.fighters.length;
   state.fighters.forEach((f, i) => {
     const cx = (w * (i + 1)) / (n + 1);

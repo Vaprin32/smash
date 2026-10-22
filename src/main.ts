@@ -25,9 +25,9 @@ let debug = false;
 keyboard.onPress(BINDINGS.toggleDebug, () => (debug = !debug));
 keyboard.onPress(BINDINGS.reset, () => (state = newMatch()));
 
-let viewW = 0, viewH = 0;
+let viewW = 0, viewH = 0, dpr = 1;
 function resize(): void {
-  const dpr = window.devicePixelRatio || 1;
+  dpr = window.devicePixelRatio || 1;
   viewW = Math.floor(window.innerWidth * dpr);
   viewH = Math.floor(window.innerHeight * dpr);
   canvas.width = viewW;
@@ -64,8 +64,8 @@ function tick(now: number): void {
   camera.update(state, viewW, viewH);
   drawWorld(ctx, state, camera, viewW, viewH);
   if (debug) drawDebugWorld(ctx, state, camera, viewW, viewH);
-  drawHud(ctx, state, viewW, viewH);
-  if (debug) drawDebugText(ctx, state, { renderFps, simFps });
+  drawHud(ctx, state, viewW, viewH, dpr);
+  if (debug) drawDebugText(ctx, state, { renderFps, simFps }, dpr);
 
   renderFrames++;
   if (now - fpsWindowStart >= 1000) {
