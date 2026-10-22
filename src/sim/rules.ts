@@ -60,8 +60,8 @@ export const MAX_SMASH_CHARGE = 60;
 export const CHARGE_DEN = 150;
 
 // Grabs.
-/** Distance in front of the grabber where the held fighter is kept. */
-export const GRAB_HOLD_DISTANCE = px(26);
+/** The held fighter is kept this percent of both fighters' half-widths in front of the grabber. */
+export const GRAB_HOLD_PERCENT = 72;
 /** Frames a grabbed fighter is held: base + damage / divisor, capped. Mashing shortens it. */
 export const GRAB_HOLD_BASE = 60;
 export const GRAB_HOLD_DAMAGE_DIVISOR = 2;

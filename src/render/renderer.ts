@@ -7,14 +7,24 @@ import type { FighterState, MatchState } from '../sim/state';
 import { SHIELD_MAX } from '../sim/rules';
 import { animate } from './animations';
 import type { Camera } from './camera';
-import { LOOKS } from './looks';
+import { LOOKS, type FighterLook } from './looks';
 import { drawRig, solveRig } from './skeleton';
 
-/** Per player slot. */
-export const SLOT_COLORS = ['#5ad1e6', '#f08a4b'];
+/** Per player slot: name tags, cursors, shields. Fighters wear their own colors. */
+export const SLOT_COLORS = ['#ff5a5a', '#4f9dff'];
 
 export function slotColor(slot: number): string {
   return SLOT_COLORS[slot % SLOT_COLORS.length]!;
+}
+
+export function lookOf(charId: number): FighterLook {
+  return LOOKS[charId % LOOKS.length]!;
+}
+
+/** A fighter's outfit color; the alternate if an earlier slot picked the same fighter. */
+export function fighterColor(chars: readonly number[], slot: number): string {
+  const look = lookOf(chars[slot]!);
+  return chars.slice(0, slot).includes(chars[slot]!) ? look.alt : look.body;
 }
 
 export function drawWorld(ctx: CanvasRenderingContext2D, state: MatchState, cam: Camera, w: number, h: number): void {
@@ -27,8 +37,9 @@ export function drawWorld(ctx: CanvasRenderingContext2D, state: MatchState, cam:
 
   cam.apply(ctx, w, h);
   drawStage(ctx, state);
-  state.fighters.forEach((f, i) => drawFighter(ctx, state, f, i));
-  state.fighters.forEach((f, i) => drawProjectile(ctx, f, i));
+  const chars = state.fighters.map((f) => f.charId);
+  state.fighters.forEach((f, i) => drawFighter(ctx, state, f, i, fighterColor(chars, i)));
+  state.fighters.forEach((f, i) => drawProjectile(ctx, f, fighterColor(chars, i)));
 }
 
 function drawStage(ctx: CanvasRenderingContext2D, state: MatchState): void {
@@ -59,11 +70,11 @@ function drawStage(ctx: CanvasRenderingContext2D, state: MatchState): void {
   }
 }
 
-function drawFighter(ctx: CanvasRenderingContext2D, state: MatchState, f: FighterState, slot: number): void {
+function drawFighter(ctx: CanvasRenderingContext2D, state: MatchState, f: FighterState, slot: number, color: string): void {
   if (f.action === Action.KO || f.action === Action.Out) return;
   const st = FIGHTERS[f.charId]!.stats;
-  const look = LOOKS[f.charId % LOOKS.length]!;
-  const color = slotColor(slot);
+  const look = lookOf(f.charId);
+  const tag = slotColor(slot);
   const intangible = isIntangible(f, st);
 
   let x = f.x / ONE;
@@ -106,7 +117,7 @@ function drawFighter(ctx: CanvasRenderingContext2D, state: MatchState, f: Fighte
     ctx.fill();
   }
 
-  drawShield(ctx, f, x, y - st.height / ONE / 2, st.height / ONE, color);
+  drawShield(ctx, f, x, y - st.height / ONE / 2, st.height / ONE, tag);
   if (f.action === Action.ShieldBreak && f.ground >= 0) drawDizzy(ctx, x, y - st.height / ONE - 14, state.frame);
 
   if (f.action === Action.Respawn) {
@@ -114,28 +125,93 @@ function drawFighter(ctx: CanvasRenderingContext2D, state: MatchState, f: Fighte
     ctx.fillRect(x - 40, y, 80, 5);
   }
 
-  ctx.fillStyle = '#ffffff';
+  // Player tag with a small pointer, in the slot color.
+  const ty = y - st.height / ONE - 22;
   ctx.font = 'bold 14px system-ui, sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText(`P${slot + 1}`, x, y - st.height / ONE - 16);
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = '#11131f';
+  ctx.strokeText(`P${slot + 1}`, x, ty);
+  ctx.fillStyle = tag;
+  ctx.fillText(`P${slot + 1}`, x, ty);
+  ctx.beginPath();
+  ctx.moveTo(x - 5, ty + 4);
+  ctx.lineTo(x + 5, ty + 4);
+  ctx.lineTo(x, ty + 10);
+  ctx.closePath();
+  ctx.fill();
 }
 
-/** Wind Bolt: a small spinning gust. */
-function drawProjectile(ctx: CanvasRenderingContext2D, f: FighterState, slot: number): void {
+/** Neutral special projectile, drawn in the owner's style and color. */
+function drawProjectile(ctx: CanvasRenderingContext2D, f: FighterState, color: string): void {
   if (f.projLife <= 0) return;
   const x = f.projX / ONE, y = f.projY / ONE;
-  const spin = performance.now() * 0.02 * Math.sign(f.projVx || 1);
+  const dir = Math.sign(f.projVx || 1);
+  const t = performance.now();
+  const spin = t * 0.02 * dir;
   ctx.save();
-  ctx.strokeStyle = slotColor(slot);
-  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  ctx.strokeStyle = color;
   ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.arc(x, y, 11, 0, Math.PI * 2);
-  ctx.fill();
-  for (let k = 0; k < 3; k++) {
-    ctx.beginPath();
-    ctx.arc(x, y, 6 + k * 3, spin + k * 2, spin + k * 2 + 2.2);
-    ctx.stroke();
+  switch (lookOf(f.charId).projectile) {
+    case 'pebble':
+      ctx.fillStyle = '#b9a58a';
+      ctx.strokeStyle = '#11131f';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.ellipse(x, y, 7, 6, spin * 0.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      break;
+    case 'dart':
+      ctx.fillStyle = color;
+      ctx.strokeStyle = '#11131f';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x + dir * 12, y);
+      ctx.lineTo(x - dir * 8, y - 5);
+      ctx.lineTo(x - dir * 4, y);
+      ctx.lineTo(x - dir * 8, y + 5);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      break;
+    case 'orb': {
+      const pulse = 1 + Math.sin(t * 0.012) * 0.12;
+      const g = ctx.createRadialGradient(x, y, 2, x, y, 18 * pulse);
+      g.addColorStop(0, '#ffffff');
+      g.addColorStop(0.45, color);
+      g.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(x, y, 18 * pulse, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+    }
+    case 'crescent': {
+      // An arc bulging the way it travels.
+      const a0 = dir > 0 ? -1.1 : Math.PI - 1.1;
+      ctx.beginPath();
+      ctx.arc(x - dir * 6, y, 15, a0, a0 + 2.2);
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = '#11131f';
+      ctx.stroke();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = color;
+      ctx.stroke();
+      break;
+    }
+    default: {
+      // Gust: a small spinning swirl.
+      ctx.fillStyle = 'rgba(255,255,255,0.35)';
+      ctx.beginPath();
+      ctx.arc(x, y, 11, 0, Math.PI * 2);
+      ctx.fill();
+      for (let k = 0; k < 3; k++) {
+        ctx.beginPath();
+        ctx.arc(x, y, 6 + k * 3, spin + k * 2, spin + k * 2 + 2.2);
+        ctx.stroke();
+      }
+    }
   }
   ctx.restore();
 }

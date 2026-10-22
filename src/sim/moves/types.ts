@@ -102,7 +102,7 @@ export interface MoveDef {
   noDrift?: boolean;
   /** Enter special fall (helpless) when the move ends in the air. */
   helplessAfter?: boolean;
-  /** Once per airtime when used in the air (side special). */
+  /** Specials only: usable once per airtime when started in the air. */
   oncePerAir?: boolean;
   /** Smash attack: holding the button freezes the move on this frame to charge it. */
   chargeFrame?: number;

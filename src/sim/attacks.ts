@@ -106,19 +106,13 @@ export function tryStartAction(
 }
 
 function startSpecial(f: FighterState, up: boolean, down: boolean, dirX: number, def: FighterDef, grounded: boolean): boolean {
-  if (up) {
-    startMove(f, MoveId.UpSpecial);
-  } else if (down) {
-    startMove(f, MoveId.DownSpecial);
-  } else if (dirX !== 0) {
-    if (!grounded && def.moves[MoveId.SideSpecial]!.oncePerAir) {
-      if (f.sideSpecialUsed) return false;
-      f.sideSpecialUsed = 1;
-    }
-    startMove(f, MoveId.SideSpecial, dirX);
-  } else {
-    startMove(f, MoveId.NSpecial);
+  const move = up ? MoveId.UpSpecial : down ? MoveId.DownSpecial : dirX !== 0 ? MoveId.SideSpecial : MoveId.NSpecial;
+  if (!grounded && def.moves[move]!.oncePerAir) {
+    const bit = 1 << move;
+    if (f.oncePerAirUsed & bit) return false;
+    f.oncePerAirUsed |= bit;
   }
+  startMove(f, move, move === MoveId.SideSpecial ? dirX : 0);
   return true;
 }
 

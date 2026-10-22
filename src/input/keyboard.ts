@@ -49,6 +49,11 @@ export class Keyboard {
     this.handlers.set(code, fn);
   }
 
+  /** True if `code` went down since the last `endFrame`. */
+  wasPressed(code: string): boolean {
+    return this.tapped.has(code);
+  }
+
   /** Bitmask for one player this frame. Call `endFrame` after sampling every player. */
   sample(player: number): InputBits {
     const keys = BINDINGS.players[player];

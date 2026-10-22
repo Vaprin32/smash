@@ -1,6 +1,7 @@
 // Render-only camera. Lives entirely outside sim state and uses floats freely.
 
 import { Action } from '../sim/actions';
+import { FIGHTERS } from '../sim/fighters';
 import { ONE } from '../sim/fixed';
 import { STAGES } from '../sim/stage';
 import type { MatchState } from '../sim/state';
@@ -39,7 +40,7 @@ export class Camera {
     for (const f of state.fighters) {
       if (f.action === Action.KO || f.action === Action.Out) continue;
       include(f.x / ONE, f.y / ONE);
-      include(f.x / ONE, f.y / ONE - 80);
+      include(f.x / ONE, (f.y - FIGHTERS[f.charId]!.stats.height) / ONE - 30);
     }
 
     const w = maxX - minX + PADDING * 2;

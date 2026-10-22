@@ -144,6 +144,49 @@ const ATTACKS: Record<number, AttackAnim> = {
   ),
 };
 
+const SHOULDER_CHARGE = P({ torso: 40, head: -14, armF: [30, 90], armB: [-40, 60], legF: [60, -40], legB: [-50, -35] });
+const OVERHEAD = P({ torso: -10, head: -8, armF: [170, 10], armB: [160, 10], legF: [30, -30], legB: [-30, -10] });
+const SLAM = P({ torso: 40, head: 10, armF: [40, 0], armB: [30, 0], legF: [50, -60], legB: [-40, -20] });
+
+/**
+ * Per-fighter overrides (by fighter name, then MoveId) for signature moves
+ * whose shape differs from Wisp's. Anything not listed uses ATTACKS.
+ */
+const CHAR_ATTACKS: Record<string, Record<number, AttackAnim>> = {
+  Brick: {
+    [MoveId.NSpecial]: ATTACKS[MoveId.FSmash]!,
+    [MoveId.SideSpecial]: A(DASH, SHOULDER_CHARGE),
+    [MoveId.DownSpecial]: ATTACKS[MoveId.DAir]!,
+  },
+  Pip: {
+    [MoveId.DownSpecial]: A(CROUCH, ATTACKS[MoveId.USmash]!.strike[0]!),
+  },
+  Kestrel: {
+    [MoveId.SideSpecial]: A(
+      TUCK,
+      P({ torso: 34, head: -8, armF: [-50, 20], armB: [-70, 20], legF: [62, 0], legB: [-15, -70] }),
+    ),
+    [MoveId.DownSpecial]: ATTACKS[MoveId.DAir]!,
+  },
+  Lumen: {
+    [MoveId.SideSpecial]: ATTACKS[MoveId.NSpecial]!,
+    [MoveId.DownSpecial]: A(GUARD, P({ torso: -8, head: -12, armF: [125, 0], armB: [-125, 0], legF: [30, -10], legB: [-30, -10] })),
+  },
+  Basalt: {
+    [MoveId.NSpecial]: ATTACKS[MoveId.USmash]!,
+    [MoveId.SideSpecial]: A(DASH, SHOULDER_CHARGE),
+    [MoveId.DownSpecial]: A(OVERHEAD, SLAM),
+  },
+  Sable: {
+    [MoveId.SideSpecial]: ATTACKS[MoveId.FSmash]!,
+    [MoveId.DownSpecial]: A(
+      P({ torso: -6, armF: [-40, 30], armB: [20, 40], legF: [30, -30], legB: [-30, -10] }),
+      P({ torso: 22, armF: [96, 0], armB: [-30, 30], legF: [40, -30], legB: [-35, -5] }),
+      P({ torso: -14, head: -10, armF: [-100, 0], armB: [40, 30], legF: [35, -10], legB: [-40, -30] }),
+    ),
+  },
+};
+
 const ease = (t: number) => t * t * (3 - 2 * t);
 const clamp01 = (t: number) => (t < 0 ? 0 : t > 1 ? 1 : t);
 
@@ -168,8 +211,9 @@ function activeWindows(m: MoveDef): [number, number][] {
 }
 
 function attackPose(f: FighterState, base: Pose): Pose {
-  const m = FIGHTERS[f.charId]!.moves[f.move];
-  const anim = ATTACKS[f.move];
+  const def = FIGHTERS[f.charId]!;
+  const m = def.moves[f.move];
+  const anim = CHAR_ATTACKS[def.name]?.[f.move] ?? ATTACKS[f.move];
   if (!m || !anim) return base;
   const windows = activeWindows(m);
   const first = windows[0]![0];
@@ -228,17 +272,33 @@ export interface Animated {
   charging: number;
 }
 
+/** Standing and breathing; `frame` drives the breath. Also used by the character select preview. */
+export function idlePose(frame: number): Pose {
+  const breathe = Math.sin(frame * 0.07);
+  return P({ torso: 4 + breathe * 1.5, armF: [12, 20 + breathe * 5], armB: [-10, 20 + breathe * 5] });
+}
+
+/** Arms up, bouncing. For the results screen. */
+export function victoryPose(frame: number): Pose {
+  const b = Math.abs(Math.sin(frame * 0.09));
+  return P({ torso: -6, head: -14, armF: [170 - b * 20, 10], armB: [150 + b * 20, 15], legF: [12, -10 - b * 30], legB: [-12, -8 - b * 30] });
+}
+
+/** Slumped. For the results screen. */
+export function defeatPose(frame: number): Pose {
+  return { ...LIMP, head: 22 + Math.sin(frame * 0.03) * 3, legF: [16, -30], legB: [-12, -40] };
+}
+
 export function animate(f: FighterState, state: MatchState): Animated {
   const grounded = f.ground >= 0;
   const st = FIGHTERS[f.charId]!.stats;
   const t = f.actionFrame;
-  const breathe = Math.sin(state.frame * 0.07);
   const out = (pose: Pose, planted: boolean): Animated => ({ pose, planted, charging: 0 });
 
   switch (f.action) {
     case Action.Idle:
     case Action.Respawn:
-      return out(P({ torso: 4 + breathe * 1.5, armF: [12, 20 + breathe * 5], armB: [-10, 20 + breathe * 5] }), grounded);
+      return out(idlePose(state.frame), grounded);
     case Action.Walk:
       return out(walkPose(t * 0.24, 26, 30, 6, 22), true);
     case Action.Run:

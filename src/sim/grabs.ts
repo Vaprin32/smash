@@ -4,16 +4,23 @@
 import { Action, setAction } from './actions';
 import { applyHit } from './combat';
 import { SimEvent } from './events';
+import { idiv } from './fixed';
 import { FIGHTERS } from './fighters';
-import { GRAB_HOLD_DISTANCE, GRAB_RELEASE_SPEED } from './rules';
+import { GRAB_HOLD_PERCENT, GRAB_RELEASE_SPEED } from './rules';
 import type { FighterState, MatchState } from './state';
 import { icos } from './trig';
 
 const PUMMEL_HITLAG = 3;
 
+/** Distance between holder and held fighter; bigger bodies are held further out. */
+function holdDistance(h: FighterState, v: FighterState): number {
+  const widths = FIGHTERS[h.charId]!.stats.width + FIGHTERS[v.charId]!.stats.width;
+  return idiv(widths * GRAB_HOLD_PERCENT, 200);
+}
+
 /** Keep the held fighter in front of the holder, facing them. */
 export function placeHeld(h: FighterState, v: FighterState): void {
-  v.x = h.x + h.facing * GRAB_HOLD_DISTANCE;
+  v.x = h.x + h.facing * holdDistance(h, v);
   v.y = h.y;
   v.ground = h.ground;
   v.vx = 0;
@@ -72,7 +79,7 @@ export function updateGrabs(s: MatchState): void {
       }
       if (m.throw && h.actionFrame >= m.throw.frame) {
         // Throws aimed backward release the victim behind the thrower.
-        if (icos(m.throw.hit.angle) < 0) v.x = h.x - h.facing * GRAB_HOLD_DISTANCE;
+        if (icos(m.throw.hit.angle) < 0) v.x = h.x - h.facing * holdDistance(h, v);
         h.grabTarget = -1;
         v.heldBy = -1;
         applyHit(h, v, vi, m.throw.hit, h.facing, true);

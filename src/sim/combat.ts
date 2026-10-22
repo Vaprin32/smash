@@ -196,7 +196,7 @@ export function applyHit(a: FighterState, v: FighterState, victimIndex: number, 
   v.actBuffer = 0;
   v.actBufferTimer = 0;
   v.airDodgeUsed = 0;
-  v.sideSpecialUsed = 0;
+  v.oncePerAirUsed = 0;
   v.jumpsLeft = vst.airJumps;
   v.charge = 0;
 

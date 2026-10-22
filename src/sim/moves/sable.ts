@@ -1,0 +1,57 @@
+import { px } from '../fixed';
+import { deriveMoves } from './derive';
+import { hitbox, launch, MoveId } from './types';
+import { WISP_MOVES } from './wisp';
+
+// Sable: Wisp's normals with a blade's extra reach, plus swordplay specials.
+export const SABLE_MOVES = deriveMoves(
+  WISP_MOVES,
+  { frames: 105, size: 117, reach: 130, damage: 110, knockback: 105 },
+  {
+    [MoveId.NSpecial]: {
+      name: 'Crescent Wave',
+      total: 38,
+      landingLag: 10,
+      hitboxes: [],
+      projectile: { frame: 12, x: px(30), y: px(-40), speed: px(8), life: 45, hit: launch(7, 4.5, 7, 35, 14) },
+    },
+    [MoveId.SideSpecial]: {
+      // A long thrust; the tip hits hardest.
+      name: 'Lunge',
+      total: 42,
+      landingLag: 12,
+      noDrift: true,
+      oncePerAir: true,
+      noGravity: [8, 16],
+      impulses: [
+        { frame: 8, vx: px(9), airVy: px(-1) },
+        { frame: 17, vx: px(2) },
+      ],
+      hitboxes: [
+        hitbox({ frames: [10, 16], x: 74, y: -40, r: 14, damage: 13, kb: 6.5, growth: 13, angle: 32 }),
+        hitbox({ frames: [10, 16], x: 42, y: -40, r: 16, damage: 8, kb: 4, growth: 8, angle: 40 }),
+      ],
+    },
+    [MoveId.UpSpecial]: {
+      name: 'Rising Blade',
+      total: 40,
+      landingLag: 14,
+      helplessAfter: true,
+      impulses: [{ frame: 5, vx: px(2), vy: px(-13.5) }],
+      hitboxes: [hitbox({ frames: [5, 14], x: 26, y: -70, r: 24, damage: 9, kb: 5.5, growth: 9, angle: 80 })],
+    },
+    [MoveId.DownSpecial]: {
+      // Slashes in front, then behind.
+      name: 'Whirl Slash',
+      total: 40,
+      landingLag: 12,
+      noDrift: true,
+      noGravity: [6, 18],
+      impulses: [{ frame: 1, airVy: px(-2) }],
+      hitboxes: [
+        hitbox({ frames: [8, 11], x: 50, y: -36, r: 24, damage: 9, kb: 5, growth: 10, angle: 40 }),
+        hitbox({ frames: [14, 17], x: -50, y: -36, r: 24, damage: 10, kb: 5.5, growth: 11, angle: 140 }),
+      ],
+    },
+  },
+);

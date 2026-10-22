@@ -32,7 +32,7 @@ Read this whole file before writing code. Re-read the "Hard rules" section befor
 
 ## Game design (v1 scope)
 
-Keep it small and make it feel good. Two original fighters, one stage, 1v1, 3 stocks.
+Keep it small and make it feel good. Eight original fighters, one stage, 1v1, 3 stocks.
 
 **Movement:** walk, run (on double-tap or hold, pick one), short hop vs full hop (based on how long jump is held), one double jump, fast-fall (down while falling), air drift, ground friction, air friction, max fall speed. Platforms: one main solid stage plus 2–3 pass-through platforms (drop through with down). Blast zones on all four sides; crossing one loses a stock. Respawn above the stage with ~2 seconds of invincibility.
 
@@ -41,7 +41,16 @@ Keep it small and make it feel good. Two original fighters, one stage, 1v1, 3 st
 - Fighters have a hurtbox (capsule or rectangle).
 - On hit: add damage %, apply **hitlag** to both fighters (a few frames of freeze scaled by damage), then launch the victim. Knockback magnitude ≈ `base + (victimDamage * growth) / scale`, applied at the move's angle (flipped by attacker facing). Hitstun frames scale with knockback. A move hits a given fighter only once per use.
 - Moveset per fighter: grounded light attack in 3 directions (neutral, side, down), aerial light attack in 4 directions (neutral, forward, back/down, up), a heavy/special in 2 directions (side, up — up is the recovery move), and a dodge (ground: short invincible roll; air: brief invincible air dodge, usable once per airtime).
-- The two fighters should feel different: one fast, light and floaty with weak moves; one heavy, slow and hard-hitting.
+- The eight fighters must each look and feel different. Vary body size (hurtbox and drawn body together), weight, walk/run speed, jump height and number of air jumps, gravity and fall speed, and attack speed, range and power. The roster covers at least these archetypes:
+  1. fast, light and floaty with weak moves;
+  2. heavy, slow and hard-hitting;
+  3. tiny featherweight with extra air jumps;
+  4. giant super-heavyweight;
+  5. fast-falling rushdown;
+  6. floaty long-range zoner;
+  7. long-reach (disjointed) fighter;
+  8. all-rounder.
+- Each fighter has its own colors, body proportions and one distinguishing visual feature (e.g. scarf, helmet, cape, blade), plus an alternate color for mirror matches. Each has its own hand-written signature specials. Their other moves may come from a shared template scaled per fighter (frame timings, size/reach, damage, knockback), so all eight stay readable and tunable in one place each.
 
 **Presentation:** fighters as simple colored shapes with an outline and a facing indicator, a camera that zooms/pans to keep both fighters in view (camera is render-only, not sim state), damage % and stock icons at the bottom, simple hit sparks, screen shake on strong hits, and a basic WebAudio blip for hits. A debug overlay toggled with F1 shows hitboxes (red), hurtboxes (yellow), frame number, current action and action frame, and in online mode: ping, rollback frames per second, max rollback depth, and the current local/remote frame advantage.
 
@@ -97,8 +106,8 @@ Hitboxes/hurtboxes, move data format, full moveset for fighter A, damage %, hitl
 Done when: you can hit a training dummy (second fighter with no input) and it flies further at higher %; hitboxes are visible in debug view.
 
 **M3 — Local versus**
-Second fighter (B) with a distinct feel, two local players on keyboard and gamepads, camera, HUD, menus, character select, results screen.
-Done when: two people on one keyboard can play a full 3-stock match start to finish.
+Seven more fighters (eight in total) with distinct stats, visuals and specials, as described under Game design. Two local players on keyboard and gamepads, camera, HUD, menus, character select (all eight fighters in a grid, with a preview and stat bars), results screen.
+Done when: two people on one keyboard can play a full 3-stock match start to finish with any pair of the eight fighters, mirror matches included. Tests check that every fighter's move data is valid, that the fighters' stats really differ, that heavier fighters are launched less far, and that every fighter can recover to the stage from just off the edge.
 
 **M4 — Determinism harness + replays**
 Record a match as `(seed, setup, input list)`. Tests: (a) run the same recorded inputs twice and assert identical `hashState` at every frame; (b) run a long randomized-input match and assert identical hashes across two runs; (c) save-state at frame N, simulate to M, restore N, re-simulate to M, assert identical hash. Add a "watch replay" option for the last match.

@@ -21,6 +21,9 @@ export interface Pose {
   spin: number;
 }
 
+/** The one feature that sets a fighter's silhouette apart. */
+export type Accessory = 'scarf' | 'helmet' | 'ears' | 'crest' | 'halo' | 'boulders' | 'blade' | 'cape';
+
 export interface Look {
   thigh: number;
   shin: number;
@@ -34,6 +37,7 @@ export interface Look {
   skin: string;
   hair: string;
   accent: string;
+  accessory: Accessory;
 }
 
 export function mixPose(a: Pose, b: Pose, t: number): Pose {
@@ -121,6 +125,13 @@ function shade(hex: string, k: number): string {
   return `rgb(${ch((n >> 16) & 255)},${ch((n >> 8) & 255)},${ch(n & 255)})`;
 }
 
+/** Mix a #rrggbb color toward white by `t` (0..1), e.g. for readable text in a fighter's color. */
+export function tint(hex: string, t: number): string {
+  const n = parseInt(hex.slice(1), 16);
+  const ch = (v: number) => Math.round(v + (255 - v) * t);
+  return `rgb(${ch((n >> 16) & 255)},${ch((n >> 8) & 255)},${ch(n & 255)})`;
+}
+
 const OUTLINE = '#11131f';
 
 export interface DrawOpts {
@@ -133,17 +144,30 @@ export interface DrawOpts {
   alpha: number;
   /** Outline color override (e.g. white while intangible). */
   outline?: string;
-  /** Scarf flutter phase (render time). */
+  /** Flutter / bob phase for accessories (render time in ms). */
   time: number;
-  /** World-space velocity in px/frame, for the scarf. */
+  /** World-space velocity in px/frame, for trailing cloth. */
   vx: number;
 }
 
-/** Draw the rig. Back limbs first, front limbs last. */
+const add = (p: Pt, d: Pt, k: number): Pt => ({ x: p.x + d.x * k, y: p.y + d.y * k });
+
+function unit(from: Pt, to: Pt): Pt {
+  const dx = to.x - from.x, dy = to.y - from.y;
+  const len = Math.hypot(dx, dy) || 1;
+  return { x: dx / len, y: dy / len };
+}
+
+/** Draw the rig. Back limbs first, front limbs last; the accessory goes where it belongs in that order. */
 export function drawRig(ctx: CanvasRenderingContext2D, rig: Rig, look: Look, o: DrawOpts): void {
   const W = (p: Pt) => ({ x: o.x + o.facing * p.x, y: o.y + p.y });
   const outline = o.outline ?? OUTLINE;
   const back = shade(o.color, 0.68);
+  const acc = look.accessory;
+  // Head axes in local space: `up` points from the neck through the head, `fwd` the way the face looks.
+  const up = unit(rig.shoulder, rig.head);
+  const fwd = { x: -up.y, y: up.x };
+  const r = look.headR;
 
   const seg = (pts: Pt[], width: number, color: string) => {
     ctx.lineCap = 'round';
@@ -161,17 +185,71 @@ export function drawRig(ctx: CanvasRenderingContext2D, rig: Rig, look: Look, o: 
     ctx.lineWidth = width;
     ctx.stroke();
   };
+  const shape = (pts: Pt[], fill: string, lineWidth = 2) => {
+    ctx.beginPath();
+    pts.forEach((p, i) => {
+      const w = W(p);
+      if (i === 0) ctx.moveTo(w.x, w.y);
+      else ctx.lineTo(w.x, w.y);
+    });
+    ctx.closePath();
+    ctx.fillStyle = fill;
+    ctx.fill();
+    ctx.strokeStyle = outline;
+    ctx.lineWidth = lineWidth;
+    ctx.stroke();
+  };
+  const disc = (p: Pt, radius: number, fill: string, lineWidth = 2) => {
+    const w = W(p);
+    ctx.beginPath();
+    ctx.arc(w.x, w.y, radius, 0, Math.PI * 2);
+    ctx.fillStyle = fill;
+    ctx.fill();
+    if (lineWidth <= 0) return;
+    ctx.strokeStyle = outline;
+    ctx.lineWidth = lineWidth;
+    ctx.stroke();
+  };
+  /** Lumpy rock centered on `c`. */
+  const rock = (c: Pt, radius: number, fill: string) => {
+    const lumps = [1, 0.82, 0.97, 0.78, 1.05, 0.86, 0.94];
+    shape(
+      lumps.map((k, i) => {
+        const a = (i / lumps.length) * Math.PI * 2;
+        return { x: c.x + Math.cos(a) * radius * k, y: c.y + Math.sin(a) * radius * k };
+      }),
+      fill,
+    );
+  };
 
   ctx.save();
   ctx.globalAlpha = o.alpha;
 
-  // Scarf: trails behind the neck, flutters with speed.
-  const neck = rig.shoulder;
+  // --- Behind the body ---
   const trail = -1 - Math.min(2.5, Math.abs(o.vx) / 3);
   const wave = Math.sin(o.time * 0.012) * 3;
-  const s1 = { x: neck.x + trail * 7, y: neck.y + 4 + wave };
-  const s2 = { x: neck.x + trail * 13, y: neck.y + 9 - wave };
-  seg([neck, s1, s2], 5, look.accent);
+  if (acc === 'scarf') {
+    // Trails behind the neck, flutters with speed.
+    const neck = rig.shoulder;
+    const s1 = { x: neck.x + trail * 7, y: neck.y + 4 + wave };
+    const s2 = { x: neck.x + trail * 13, y: neck.y + 9 - wave };
+    seg([neck, s1, s2], 5, look.accent);
+  } else if (acc === 'cape') {
+    // Hangs from both shoulders to below the hips, billowing back with speed.
+    const s = rig.shoulder, hp = rig.hip;
+    const drop = (hp.y - s.y) * 0.45;
+    shape(
+      [
+        { x: s.x + 3, y: s.y - 2 },
+        { x: s.x - 8, y: s.y },
+        { x: hp.x - 10 + trail * 8 + wave, y: hp.y + drop + 4 },
+        { x: hp.x - 2 + trail * 3, y: hp.y + drop - wave * 0.5 },
+      ],
+      look.accent,
+    );
+  } else if (acc === 'boulders') {
+    rock(add(add(rig.shoulder, fwd, -4), up, -2), look.limbW * 0.9, shade(look.hair, 0.75));
+  }
 
   seg([rig.shoulder, rig.elbowB, rig.handB], look.limbW, back);
   seg([rig.hip, rig.kneeB, rig.footB], look.limbW + 1, back);
@@ -181,39 +259,87 @@ export function drawRig(ctx: CanvasRenderingContext2D, rig: Rig, look: Look, o: 
   seg([beltA, beltA], look.torsoW - 2, look.accent);
   seg([rig.hip, rig.kneeF, rig.footF], look.limbW + 1, o.color);
 
-  // Head with hair and an eye on the facing side.
+  // --- Behind the head ---
+  if (acc === 'ears') {
+    for (const side of [-1, 1]) {
+      const c = add(add(rig.head, up, r * 0.95), fwd, side * r * 0.62);
+      disc(c, r * 0.58, look.hair);
+      disc(c, r * 0.3, look.skin, 0);
+    }
+  } else if (acc === 'crest') {
+    // Three swept-back feathers.
+    for (let k = 0; k < 3; k++) {
+      const base = add(add(rig.head, up, r * 0.5), fwd, -r * 0.1);
+      const tip = add(add(rig.head, up, r * (1.5 - k * 0.6)), fwd, -r * (2.3 + k * 0.25));
+      seg([base, tip], 5 - k, k === 1 ? look.hair : look.accent);
+    }
+  } else if (acc === 'boulders') {
+    // Pauldron sits under the head, over the shoulder joint.
+    const c = add(add(rig.shoulder, fwd, 1), up, -2);
+    rock(c, look.limbW * 0.95, look.hair);
+    const a = W(add(c, fwd, -4)), b = W(add(add(c, fwd, 3), up, -4));
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.strokeStyle = look.accent;
+    ctx.lineWidth = 1.6;
+    ctx.stroke();
+  }
+
+  // Head with hair (or a helmet) and an eye on the facing side.
   const h = W(rig.head);
   ctx.fillStyle = look.skin;
   ctx.strokeStyle = outline;
   ctx.lineWidth = 2.5;
   ctx.beginPath();
-  ctx.arc(h.x, h.y, look.headR, 0, Math.PI * 2);
+  ctx.arc(h.x, h.y, r, 0, Math.PI * 2);
   ctx.fill();
   ctx.stroke();
-  // Hair caps the half of the head pointing away from the neck.
+  // Hair caps the half of the head pointing away from the neck; a helmet covers more.
   const s = W(rig.shoulder);
   const upAngle = Math.atan2(h.y - s.y, h.x - s.x);
-  ctx.fillStyle = look.hair;
+  const cover = acc === 'helmet' ? 0.75 : 0.25;
+  ctx.fillStyle = acc === 'helmet' ? look.accent : look.hair;
   ctx.beginPath();
-  ctx.arc(h.x, h.y, look.headR, upAngle - Math.PI / 2 - 0.25, upAngle + Math.PI / 2 + 0.25);
+  ctx.arc(h.x, h.y, r, upAngle - Math.PI / 2 - cover, upAngle + Math.PI / 2 + cover);
   ctx.closePath();
   ctx.fill();
   ctx.stroke();
-  const eye = { x: rig.head.x + 3.2, y: rig.head.y + 1 };
-  const e = W(eye);
-  ctx.fillStyle = OUTLINE;
-  ctx.fillRect(e.x - 1.3, e.y - 2, 2.6, 4);
+  const e = W({ x: rig.head.x + r * 0.43, y: rig.head.y + 1 });
+  if (acc === 'helmet') {
+    // Visor slit instead of an eye.
+    ctx.fillStyle = '#ffe14f';
+    ctx.fillRect(e.x - (o.facing > 0 ? 2 : 4), e.y - 1.6, 6, 3.2);
+  } else {
+    ctx.fillStyle = OUTLINE;
+    ctx.fillRect(e.x - 1.3, e.y - 2, 2.6, 4);
+  }
+
+  // --- Above the head ---
+  if (acc === 'halo') {
+    const c = W(add(rig.head, up, r * 1.9 + Math.sin(o.time * 0.004) * 1.5));
+    const fw = W(add(rig.head, fwd, 1));
+    const tilt = Math.atan2(fw.y - h.y, fw.x - h.x);
+    ctx.beginPath();
+    ctx.ellipse(c.x, c.y, r * 1.05, r * 0.36, tilt, 0, Math.PI * 2);
+    ctx.strokeStyle = outline;
+    ctx.lineWidth = 5;
+    ctx.stroke();
+    ctx.strokeStyle = look.accent;
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+  }
 
   seg([rig.shoulder, rig.elbowF, rig.handF], look.limbW, o.color);
+  if (acc === 'blade') {
+    // A long blade held in the front hand, pointing along the forearm.
+    const d = unit(rig.elbowF, rig.handF);
+    const n = { x: -d.y, y: d.x };
+    seg([add(rig.handF, d, 2), add(rig.handF, d, 40)], 3.5, look.accent);
+    seg([add(add(rig.handF, d, 2), n, -5), add(add(rig.handF, d, 2), n, 5)], 3, look.hair);
+  }
   // Fist
-  const hf = W(rig.handF);
-  ctx.fillStyle = look.skin;
-  ctx.strokeStyle = outline;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.arc(hf.x, hf.y, look.limbW * 0.62, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.stroke();
+  disc(rig.handF, look.limbW * 0.62, look.skin);
 
   ctx.restore();
 }

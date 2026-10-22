@@ -39,6 +39,24 @@ export class Sfx {
     this.blip(600, 0.5, 'sawtooth', 0.16, 80);
   }
 
+  // Menus.
+  move(): void {
+    this.blip(520, 0.04, 'triangle', 0.06, 560);
+  }
+
+  select(): void {
+    this.blip(660, 0.09, 'square', 0.07, 990);
+  }
+
+  back(): void {
+    this.blip(440, 0.08, 'triangle', 0.07, 300);
+  }
+
+  /** Match start / end fanfare hit. */
+  go(): void {
+    this.blip(330, 0.35, 'square', 0.09, 660);
+  }
+
   private blip(freq: number, duration: number, type: OscillatorType, volume: number, endFreq = freq * 0.6): void {
     const ctx = this.ctx;
     if (!ctx || ctx.state !== 'running') return;

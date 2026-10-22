@@ -140,7 +140,7 @@ function respawn(f: FighterState, slot: number, def: FighterDef, stage: StageDef
   f.airDodgeUsed = 0;
   f.shieldHp = SHIELD_MAX;
   f.dashCooldown = 0;
-  f.sideSpecialUsed = 0;
+  f.oncePerAirUsed = 0;
   f.charge = 0;
   f.grabTarget = -1;
   f.heldBy = -1;

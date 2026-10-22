@@ -45,7 +45,8 @@ export interface FighterState {
   actBufferTimer: number;
   /** Once-per-airtime flags (1 = used), reset on landing and when hit. */
   airDodgeUsed: number;
-  sideSpecialUsed: number;
+  /** Bit (1 << MoveId) set = that `oncePerAir` move was already used this airtime. */
+  oncePerAirUsed: number;
   /** Frames a smash attack has been charged. */
   charge: number;
   /** Index of the fighter this one is holding, or -1. */
@@ -95,7 +96,7 @@ export const FIGHTER_FIELDS = [
   'actBuffer',
   'actBufferTimer',
   'airDodgeUsed',
-  'sideSpecialUsed',
+  'oncePerAirUsed',
   'charge',
   'grabTarget',
   'heldBy',
@@ -161,7 +162,7 @@ export function createMatch(setup: MatchSetup): MatchState {
         actBuffer: 0,
         actBufferTimer: 0,
         airDodgeUsed: 0,
-        sideSpecialUsed: 0,
+        oncePerAirUsed: 0,
         charge: 0,
         grabTarget: -1,
         heldBy: -1,
