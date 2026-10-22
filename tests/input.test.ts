@@ -27,17 +27,35 @@ describe('keyboard layouts', () => {
     });
   }
 
-  it('versus: P1 moves with WASD, P2 with IJKL', () => {
+  it('versus: P1 moves with WASD, P2 with OKLÑ', () => {
     const [a, b] = BINDINGS.layouts.versus as [PlayerKeys, PlayerKeys];
     expect([a.up, a.left, a.down, a.right].flat()).toEqual(['KeyW', 'KeyA', 'KeyS', 'KeyD']);
-    expect([b.up, b.left, b.down, b.right].flat()).toEqual(['KeyI', 'KeyJ', 'KeyK', 'KeyL']);
+    expect([b.up, b.left, b.down, b.right].flat()).toEqual(['KeyO', 'KeyK', 'KeyL', 'Semicolon']);
     expect(keysSummary(a)).toBe('WASD + F G R T E B');
+  });
+
+  it("versus: P2's keys are P1's mirrored around the middle of each row", () => {
+    const rows = [
+      ['KeyQ', 'KeyW', 'KeyE', 'KeyR', 'KeyT', 'KeyY', 'KeyU', 'KeyI', 'KeyO', 'KeyP'],
+      ['KeyA', 'KeyS', 'KeyD', 'KeyF', 'KeyG', 'KeyH', 'KeyJ', 'KeyK', 'KeyL', 'Semicolon'],
+      ['KeyZ', 'KeyX', 'KeyC', 'KeyV', 'KeyB', 'KeyN', 'KeyM', 'Comma', 'Period', 'Slash'],
+    ];
+    const mirror = (code: string) => {
+      const row = rows.find((r) => r.includes(code))!;
+      return row[row.length - 1 - row.indexOf(code)]!;
+    };
+    const [a, b] = BINDINGS.layouts.versus as [PlayerKeys, PlayerKeys];
+    // Mirroring swaps left and right.
+    const swap: Partial<Record<keyof PlayerKeys, keyof PlayerKeys>> = { left: 'right', right: 'left' };
+    for (const action of Object.keys(a) as (keyof PlayerKeys)[]) {
+      expect(b[swap[action] ?? action], action).toEqual(a[action].map(mirror));
+    }
   });
 
   it('the same physical key means different things per layout', () => {
     const { keyboard, down } = fakeKeyboard();
-    down('KeyJ');
-    expect(keyboard.sample(0)).toBe(Btn.Attack);
+    down('KeyK');
+    expect(keyboard.sample(0)).toBe(Btn.Heavy);
     expect(keyboard.sample(1)).toBe(0);
     keyboard.setLayout('versus');
     expect(keyboard.sample(0)).toBe(0);
@@ -52,12 +70,12 @@ describe('keyboard layouts', () => {
     expect(controls.pressed(0) & Btn.Attack).toBeTruthy();
     controls.setLayout('versus');
     controls.poll();
-    expect(controls.input(1)).toBe(Btn.Left); // still held...
-    expect(controls.pressed(1)).toBe(0); // ...but P2's cursor doesn't move
+    expect(controls.input(1)).toBe(Btn.Attack); // still held (P2's attack now)...
+    expect(controls.pressed(1)).toBe(0); // ...but it doesn't lock in P2's pick
     up('KeyJ');
     controls.poll();
     down('KeyJ');
     controls.poll();
-    expect(controls.pressed(1)).toBe(Btn.Left);
+    expect(controls.pressed(1)).toBe(Btn.Attack);
   });
 });

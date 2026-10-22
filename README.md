@@ -34,17 +34,18 @@ plus that fighter's hand-written specials. Looks (proportions, colors, accessory
 ## Controls
 
 Menus and Training use the one-player layout. Local Versus splits the keyboard in half
-(no numpad needed); keys are physical positions, so on a Spanish keyboard `;` is Ñ.
+(no numpad needed), and P2's half is P1's mirrored around the middle of each row: movement on
+the outside, actions toward the middle. Keys are physical positions (Ñ is `;` on a US keyboard).
 
 | Action | Training (P1) | Versus P1 | Versus P2 | Gamepad |
 |---|---|---|---|---|
-| Move | W A S D | W A S D | I J K L | left stick / d-pad |
-| Jump | L or Space | R | P | X / Y |
-| Attack | J | F | ; | A |
-| Smash (ground only) | K | T | [ | RB |
-| Special | I | G | ' | B |
-| Shield / roll / dodge / grab | E | E | O | LT / RT |
-| Dash | N | B | / | LB |
+| Move (up left down right) | W A S D | W A S D | O K L Ñ | left stick / d-pad |
+| Jump | L or Space | R | U | X / Y |
+| Attack | J | F | J | A |
+| Smash (ground only) | K | T | Y | RB |
+| Special | I | G | H | B |
+| Shield / roll / dodge / grab | E | E | I | LT / RT |
+| Dash | N | B | N | LB |
 
 Attack: jab combo, tilts, dash attack on the ground; aerials in the air. Smash: forward / up / down
 smash (hold to charge). Special + direction: neutral / side / up (recovery) / down special.

@@ -41,9 +41,9 @@ export const BINDINGS = {
       },
       NO_KEYS,
     ],
-    // The keyboard split in half, no numpad needed. Each player's right hand
-    // covers a mirrored block: index finger attack, middle finger special,
-    // jump and smash above them, dash below.
+    // The keyboard split in half, no numpad needed. P2's half is P1's mirrored
+    // around the middle of each row (A<->Ñ, S<->L, D<->K, F<->J, G<->H, W<->O,
+    // E<->I, R<->U, T<->Y, B<->N): movement on the outside, actions inside.
     versus: [
       {
         left: ['KeyA'],
@@ -58,16 +58,16 @@ export const BINDINGS = {
         dash: ['KeyB'],
       },
       {
-        left: ['KeyJ'],
-        right: ['KeyL'],
-        up: ['KeyI'],
-        down: ['KeyK'],
-        jump: ['KeyP'],
-        attack: ['Semicolon'],
-        heavy: ['BracketLeft'],
-        special: ['Quote'],
-        dodge: ['KeyO'],
-        dash: ['Slash'],
+        left: ['KeyK'],
+        right: ['Semicolon'],
+        up: ['KeyO'],
+        down: ['KeyL'],
+        jump: ['KeyU'],
+        attack: ['KeyJ'],
+        heavy: ['KeyY'],
+        special: ['KeyH'],
+        dodge: ['KeyI'],
+        dash: ['KeyN'],
       },
     ],
   } satisfies Record<LayoutName, PlayerKeys[]>,
