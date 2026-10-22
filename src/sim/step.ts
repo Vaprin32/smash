@@ -6,7 +6,15 @@ import type { FighterDef } from './fighters/types';
 import type { InputBits } from './input';
 import { controlFighter, readButtons } from './movement';
 import { moveFighter, outsideBlastZone } from './physics';
-import { KO_RESPAWN_DELAY, RESPAWN_INVINCIBILITY, RESPAWN_MAX_WAIT } from './rules';
+import { SimEvent } from './events';
+import {
+  KO_RESPAWN_DELAY,
+  RESPAWN_INVINCIBILITY,
+  RESPAWN_MAX_WAIT,
+  SHIELD_MAX,
+  SHIELD_REGEN,
+} from './rules';
+import { isShieldAction, updateShield, updateShieldBreak } from './shield';
 import { STAGES, type StageDef } from './stage';
 import { cloneState, type FighterState, type MatchState } from './state';
 
@@ -17,6 +25,7 @@ import { cloneState, type FighterState, type MatchState } from './state';
 export function step(prev: MatchState, inputs: readonly InputBits[]): MatchState {
   const s = cloneState(prev);
   const stage = STAGES[s.stageId]!;
+  for (const f of s.fighters) f.event = SimEvent.None;
   for (let i = 0; i < s.fighters.length; i++) {
     const f = s.fighters[i]!;
     const input = (inputs[i] ?? 0) | 0;
@@ -49,6 +58,8 @@ function updateFighter(f: FighterState, slot: number, input: number, stage: Stag
   }
 
   if (f.invincible > 0) f.invincible--;
+  if (f.dashCooldown > 0) f.dashCooldown--;
+  if (!isShieldAction(f.action)) f.shieldHp = Math.min(SHIELD_MAX, f.shieldHp + SHIELD_REGEN);
   readButtons(f, pressed);
 
   switch (f.action) {
@@ -66,13 +77,24 @@ function updateFighter(f: FighterState, slot: number, input: number, stage: Stag
     case Action.SpecialFall:
       updateSpecialFall(f, input, pressed, def);
       break;
+    case Action.Shield:
+    case Action.ShieldStun:
+    case Action.ShieldDrop:
+      updateShield(f, input, pressed, def);
+      break;
+    case Action.ShieldBreak:
+      updateShieldBreak(f, def);
+      break;
     default:
       controlFighter(f, input, pressed, def, stage);
-      // An attack or dodge started this frame runs its first frame now.
-      if (f.action === Action.Attack) updateAttack(f, input, pressed, def);
-      else if (f.action === Action.Roll || f.action === Action.SpotDodge || f.action === Action.AirDodge) {
-        updateDodge(f, input, pressed, def);
-      }
+  }
+  // An attack or dodge started this frame (from free movement or out of
+  // shield) runs its first frame now. Their updates always advance actionFrame.
+  if (f.actionFrame === 0) {
+    if (f.action === Action.Attack) updateAttack(f, input, pressed, def);
+    else if (f.action === Action.Roll || f.action === Action.SpotDodge || f.action === Action.AirDodge) {
+      updateDodge(f, input, pressed, def);
+    }
   }
 
   moveFighter(f, def, stage);
@@ -83,6 +105,7 @@ function updateFighter(f: FighterState, slot: number, input: number, stage: Stag
     f.vy = 0;
     f.ground = -1;
     f.hitstun = 0;
+    f.event = SimEvent.KO;
     setAction(f, f.stocks > 0 ? Action.KO : Action.Out);
   }
 }
@@ -103,7 +126,8 @@ function respawn(f: FighterState, slot: number, def: FighterDef, stage: StageDef
   f.actBuffer = 0;
   f.actBufferTimer = 0;
   f.airDodgeUsed = 0;
-  f.sideSpecialUsed = 0;
+  f.shieldHp = SHIELD_MAX;
+  f.dashCooldown = 0;
   f.hitstun = 0;
   f.hitlag = 0;
   f.invincible = RESPAWN_INVINCIBILITY;

@@ -47,16 +47,16 @@ export const WISP_MOVES: readonly MoveDef[] = [
     hitboxes: [hitbox({ frames: [5, 9], x: 4, y: -66, r: 22, damage: 7, kb: 4, growth: 9, angle: 85 })],
   },
   {
-    name: 'Gust Dash',
-    total: 34,
-    landingLag: 10,
+    // Heavy: slow wind-up, big knockback, only a small step forward.
+    name: 'Gale Strike',
+    total: 44,
+    landingLag: 14,
     noDrift: true,
-    noGravity: [6, 16],
-    impulses: [
-      { frame: 6, vx: px(11), airVy: px(-1.5) },
-      { frame: 17, vx: px(3) },
+    impulses: [{ frame: 11, vx: px(2.5) }],
+    hitboxes: [
+      hitbox({ frames: [13, 15], x: 40, y: -36, r: 24, damage: 16, kb: 6, growth: 17, angle: 40 }),
+      hitbox({ frames: [16, 18], x: 34, y: -34, r: 20, damage: 10, kb: 4, growth: 9, angle: 45 }),
     ],
-    hitboxes: [hitbox({ frames: [7, 14], x: 24, y: -30, r: 24, damage: 10, kb: 5, growth: 13, angle: 38 })],
   },
   {
     name: 'Updraft',

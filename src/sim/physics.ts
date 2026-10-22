@@ -1,7 +1,7 @@
 // Position integration and stage collision. Fighters collide as an axis-aligned
 // box whose origin is the bottom-center (feet). Standing / landing uses the feet point.
 
-import { Action, setAction } from './actions';
+import { Action, isGroundFree, setAction } from './actions';
 import type { FighterDef } from './fighters/types';
 import { KNOCKDOWN_HITSTUN } from './rules';
 import { surfaceOf, type Block, type StageDef } from './stage';
@@ -24,7 +24,7 @@ export function moveFighter(f: FighterState, def: FighterDef, stage: StageDef): 
     f.ground = -1;
     f.vy = 0;
     f.hopOpen = 0;
-    if (f.action <= Action.Landing) setAction(f, Action.Air);
+    if (isGroundFree(f.action)) setAction(f, Action.Air);
     return;
   }
 
@@ -97,7 +97,6 @@ function land(f: FighterState, ground: number, top: number, def: FighterDef): vo
   f.hopOpen = 0;
   f.dropTimer = 0;
   f.airDodgeUsed = 0;
-  f.sideSpecialUsed = 0;
 
   switch (f.action) {
     case Action.Hitstun:
@@ -105,6 +104,7 @@ function land(f: FighterState, ground: number, top: number, def: FighterDef): vo
       return;
     case Action.Roll:
     case Action.SpotDodge:
+    case Action.ShieldBreak:
       return;
     case Action.Attack:
       startLanding(f, def.moves[f.move]!.landingLag ?? st.landingLag);

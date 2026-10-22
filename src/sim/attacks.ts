@@ -12,10 +12,17 @@ import type { FighterState } from './state';
 const DIAGONAL = 181;
 
 /**
- * Consume a buffered Attack / Special / Dodge press if the fighter can act.
- * Directions are read from the current input. Returns true if something started.
+ * Consume a buffered Attack / Special / Dodge / Dash press if the fighter can
+ * act. Directions are read from the current input; `pressed` is this frame's
+ * fresh presses. Returns true if something started.
  */
-export function tryStartAction(f: FighterState, input: number, def: FighterDef, grounded: boolean): boolean {
+export function tryStartAction(
+  f: FighterState,
+  input: number,
+  pressed: number,
+  def: FighterDef,
+  grounded: boolean,
+): boolean {
   if (f.actBufferTimer === 0) return false;
   const btn = f.actBuffer;
   f.actBuffer = 0;
@@ -24,6 +31,7 @@ export function tryStartAction(f: FighterState, input: number, def: FighterDef, 
   const dirX = inputDirX(input);
   const up = (input & Btn.Up) !== 0;
   const down = (input & Btn.Down) !== 0;
+  const st = def.stats;
 
   if (btn === Btn.Attack) {
     if (grounded) {
@@ -40,27 +48,28 @@ export function tryStartAction(f: FighterState, input: number, def: FighterDef, 
   }
 
   if (btn === Btn.Special) {
-    if (up) {
-      startMove(f, MoveId.UpSpecial);
-      return true;
-    }
-    if (!grounded) {
-      if (f.sideSpecialUsed) return false;
-      f.sideSpecialUsed = 1;
-    }
-    startMove(f, MoveId.SideSpecial, dirX);
+    startMove(f, up ? MoveId.UpSpecial : MoveId.Heavy, up ? 0 : dirX);
+    return true;
+  }
+
+  if (btn === Btn.Dash) {
+    if (!grounded || f.dashCooldown > 0) return false;
+    const dir = dirX !== 0 ? dirX : f.facing;
+    f.facing = dir;
+    setAction(f, Action.Dash);
+    f.vx = dir * st.dashSpeed;
+    f.dashCooldown = st.dashCooldown;
     return true;
   }
 
   if (btn === Btn.Dodge) {
-    const st = def.stats;
     if (grounded) {
-      if (dirX !== 0) {
-        setAction(f, Action.Roll);
-        f.vx = dirX * st.rollSpeed;
-      } else {
-        setAction(f, Action.SpotDodge);
-      }
+      // Pressing a direction together with the button rolls / spot dodges at
+      // once; otherwise it's a shield (and you can roll out of it).
+      const pressedX = inputDirX(pressed);
+      if (pressedX !== 0) startRoll(f, pressedX, def);
+      else if (pressed & Btn.Down) setAction(f, Action.SpotDodge);
+      else setAction(f, Action.Shield);
       return true;
     }
     if (f.airDodgeUsed) return false;
@@ -75,6 +84,11 @@ export function tryStartAction(f: FighterState, input: number, def: FighterDef, 
     return true;
   }
   return false;
+}
+
+export function startRoll(f: FighterState, dir: number, def: FighterDef): void {
+  setAction(f, Action.Roll);
+  f.vx = dir * def.stats.rollSpeed;
 }
 
 /** `turnTo` (if non-zero) makes the fighter face that way first. */

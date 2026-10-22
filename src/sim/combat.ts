@@ -6,6 +6,7 @@ import { approach, idiv, ONE } from './fixed';
 import { FIGHTERS } from './fighters';
 import type { FighterStats } from './fighters/types';
 import type { HitboxDef } from './moves/types';
+import { SimEvent } from './events';
 import {
   HITLAG_BASE,
   HITLAG_DAMAGE_DIVISOR,
@@ -14,7 +15,16 @@ import {
   HITSTUN_NUM,
   KNOCKBACK_DECAY,
   MAX_DAMAGE,
+  PARRY_ATTACKER_LAG,
+  PARRY_WINDOW,
+  SHIELD_DAMAGE_PER_PERCENT,
+  SHIELD_PUSH_BASE,
+  SHIELD_PUSH_PER_PERCENT,
+  SHIELDSTUN_BASE,
+  SHIELDSTUN_DEN,
+  SHIELDSTUN_NUM,
 } from './rules';
+import { breakShield, isShieldAction } from './shield';
 import type { FighterState, MatchState } from './state';
 import { icos, isin, TRIG_ONE } from './trig';
 
@@ -75,7 +85,17 @@ export function resolveHits(s: MatchState): void {
       if (h) hits.push({ a: ai, v: vi, h });
     }
   }
-  for (const hit of hits) applyHit(s.fighters[hit.a]!, s.fighters[hit.v]!, hit.v, hit.h);
+  for (const hit of hits) {
+    const a = s.fighters[hit.a]!;
+    const v = s.fighters[hit.v]!;
+    if (isShieldAction(v.action)) applyShieldHit(a, v, hit.v, hit.h);
+    else if (v.action === Action.ShieldDrop && v.actionFrame <= PARRY_WINDOW) applyParry(a, v, hit.v, hit.h);
+    else applyHit(a, v, hit.v, hit.h);
+  }
+}
+
+function hitlagFor(h: HitboxDef): number {
+  return Math.min(HITLAG_MAX, HITLAG_BASE + idiv(h.damage, HITLAG_DAMAGE_DIVISOR));
 }
 
 /** Launch speed (fixed px/frame) a hitbox would give a victim already at `damage` (post-hit) %. */
@@ -101,13 +121,41 @@ function applyHit(a: FighterState, v: FighterState, victimIndex: number, h: Hitb
   v.actBuffer = 0;
   v.actBufferTimer = 0;
   v.airDodgeUsed = 0;
-  v.sideSpecialUsed = 0;
   v.jumpsLeft = vst.airJumps;
 
-  const lag = Math.min(HITLAG_MAX, HITLAG_BASE + idiv(h.damage, HITLAG_DAMAGE_DIVISOR));
+  const lag = hitlagFor(h);
   v.hitlag = lag;
   a.hitlag = lag;
   a.hitMask |= 1 << victimIndex;
+  v.event = SimEvent.Hit;
+}
+
+function applyShieldHit(a: FighterState, v: FighterState, victimIndex: number, h: HitboxDef): void {
+  const lag = hitlagFor(h);
+  v.hitlag = lag;
+  a.hitlag = lag;
+  a.hitMask |= 1 << victimIndex;
+  v.shieldHp -= h.damage * SHIELD_DAMAGE_PER_PERCENT;
+  if (v.shieldHp <= 0) {
+    breakShield(v);
+    v.event = SimEvent.ShieldBreak;
+    return;
+  }
+  setAction(v, Action.ShieldStun);
+  v.hitstun = idiv(h.damage * SHIELDSTUN_NUM, SHIELDSTUN_DEN) + SHIELDSTUN_BASE;
+  const away = v.x > a.x ? 1 : v.x < a.x ? -1 : a.facing;
+  v.vx = away * (SHIELD_PUSH_BASE + h.damage * SHIELD_PUSH_PER_PERCENT);
+  v.event = SimEvent.ShieldHit;
+}
+
+/** Released shield just before the hit: no damage, defender acts at once, attacker freezes longer. */
+function applyParry(a: FighterState, v: FighterState, victimIndex: number, h: HitboxDef): void {
+  const lag = hitlagFor(h);
+  setAction(v, Action.Idle);
+  v.hitlag = lag;
+  a.hitlag = lag + PARRY_ATTACKER_LAG;
+  a.hitMask |= 1 << victimIndex;
+  v.event = SimEvent.Parry;
 }
 
 export function updateHitstun(f: FighterState, st: FighterStats): void {

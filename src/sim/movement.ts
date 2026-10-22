@@ -4,7 +4,7 @@
 
 import { Action, setAction } from './actions';
 import { tryStartAction } from './attacks';
-import { approach, clamp } from './fixed';
+import { approach, clamp, idiv } from './fixed';
 import type { FighterDef, FighterStats } from './fighters/types';
 import { Btn } from './input';
 import { ACTION_BUFFER_FRAMES, JUMP_BUFFER_FRAMES } from './rules';
@@ -20,9 +20,9 @@ export function readButtons(f: FighterState, pressed: number): void {
   if (pressed & Btn.Jump) f.jumpBuffer = JUMP_BUFFER_FRAMES;
   else if (f.jumpBuffer > 0) f.jumpBuffer--;
 
-  const act = pressed & (Btn.Attack | Btn.Special | Btn.Dodge);
+  const act = pressed & (Btn.Attack | Btn.Special | Btn.Dodge | Btn.Dash);
   if (act) {
-    f.actBuffer = act & -act; // lowest bit wins: Attack > Special > Dodge
+    f.actBuffer = act & -act; // lowest bit wins: Attack > Special > Dodge > Dash
     f.actBufferTimer = ACTION_BUFFER_FRAMES;
   } else if (f.actBufferTimer > 0) {
     f.actBufferTimer--;
@@ -57,8 +57,12 @@ function groundControl(
     if (f.actionFrame < f.landLag) return;
     setAction(f, Action.Idle);
   }
+  if (f.action === Action.Dash) {
+    dashControl(f, input, pressed, dirX, def);
+    return;
+  }
 
-  if (tryStartAction(f, input, def, true)) return;
+  if (tryStartAction(f, input, pressed, def, true)) return;
 
   if (f.jumpBuffer > 0) {
     f.jumpBuffer = 0;
@@ -104,6 +108,25 @@ function groundControl(
   f.vx = approach(f.vx, target, rate);
 }
 
+/** Dash: speed decays from dashSpeed to runSpeed; can jump or act out of it. */
+function dashControl(f: FighterState, input: number, pressed: number, dirX: number, def: FighterDef): void {
+  const st = def.stats;
+  f.actionFrame++;
+  if (tryStartAction(f, input, pressed, def, true)) return;
+  if (f.jumpBuffer > 0) {
+    f.jumpBuffer = 0;
+    setAction(f, Action.JumpSquat);
+    return;
+  }
+  if (f.actionFrame < st.dashFrames) {
+    const speed = st.dashSpeed - idiv((st.dashSpeed - st.runSpeed) * f.actionFrame, st.dashFrames);
+    f.vx = f.facing * speed;
+    return;
+  }
+  f.vx = f.facing * st.runSpeed;
+  setAction(f, dirX === f.facing ? Action.Run : Action.Idle);
+}
+
 function launchJump(f: FighterState, input: number, st: FighterStats): void {
   const held = (input & Btn.Jump) !== 0;
   f.vy = -(held ? st.fullHopSpeed : st.shortHopSpeed);
@@ -131,7 +154,7 @@ function airControl(f: FighterState, input: number, pressed: number, dirX: numbe
     }
   }
 
-  if (tryStartAction(f, input, def, false)) return;
+  if (tryStartAction(f, input, pressed, def, false)) return;
 
   if (pressed & Btn.Jump && f.jumpsLeft > 0) {
     f.jumpsLeft--;

@@ -5,6 +5,15 @@ import { FIGHTERS } from '../src/sim/fighters';
 import { px } from '../src/sim/fixed';
 import { Btn } from '../src/sim/input';
 import { MoveId } from '../src/sim/moves/types';
+import { SimEvent } from '../src/sim/events';
+import {
+  SHIELD_BREAK_RESET,
+  SHIELD_BREAK_STUN,
+  SHIELD_DAMAGE_PER_PERCENT,
+  SHIELD_DECAY,
+  SHIELD_DROP_FRAMES,
+  SHIELD_MAX,
+} from '../src/sim/rules';
 import { createMatch, FIGHTER_FIELDS, type MatchState } from '../src/sim/state';
 import { step } from '../src/sim/step';
 import { icos, isin, TRIG_ONE } from '../src/sim/trig';
@@ -147,8 +156,8 @@ describe('hitting the dummy', () => {
 });
 
 describe('dodges and invincibility', () => {
-  it('a spot dodge makes the dummy intangible', () => {
-    const s = run(duel(), 10, (i) => (i === 2 ? Btn.Attack : 0), tap(Btn.Dodge));
+  it('a spot dodge (dodge + down) makes the dummy intangible', () => {
+    const s = run(duel(), 10, (i) => (i === 2 ? Btn.Attack : 0), tap(Btn.Dodge | Btn.Down));
     expect(s.fighters[1]!.damage).toBe(0);
   });
 
@@ -210,14 +219,26 @@ describe('specials and aerials', () => {
     expect(s.fighters[0]!.action).toBe(Action.SpecialFall);
   });
 
-  it('side special works once per airtime', () => {
+  it('the heavy hits hard but barely moves the attacker', () => {
+    const s0 = duel(60);
+    const x0 = s0.fighters[0]!.x;
+    let maxStep = 0;
+    let launch = 0;
+    run(s0, 40, tap(Btn.Special), 0, (n) => {
+      maxStep = Math.max(maxStep, n.fighters[0]!.x - x0);
+      if (n.fighters[1]!.action === Action.Hitstun) launch = Math.max(launch, Math.abs(n.fighters[1]!.vx));
+    });
+    expect(maxStep).toBeLessThan(px(40));
+    const ftilt = run(duel(60), 10, tap(Btn.Attack | Btn.Right));
+    expect(launch).toBeGreaterThan(Math.abs(ftilt.fighters[1]!.vx));
+  });
+
+  it('the heavy can be used repeatedly in the air', () => {
     const s0 = duel(300);
-    let s = run(s0, 10, (i) => (i < 8 ? Btn.Jump : 0));
-    s = run(s, 1, Btn.Special | Btn.Right);
-    expect(s.fighters[0]!.move).toBe(MoveId.SideSpecial);
-    s = run(s, wisp.moves[MoveId.SideSpecial]!.total + 1, 0);
-    s = run(s, 1, Btn.Special | Btn.Right);
-    expect(s.fighters[0]!.action).not.toBe(Action.Attack);
+    s0.fighters[0]!.x = 0;
+    let s = run(s0, 8, Btn.Jump);
+    s = run(s, 1, Btn.Special);
+    expect(s.fighters[0]!.move).toBe(MoveId.Heavy);
   });
 
   it('landing mid-aerial uses the move landing lag', () => {
@@ -274,5 +295,114 @@ describe('combat determinism', () => {
     expect(r2.s).toEqual(r1.s);
     expect(r1.hits).toBeGreaterThan(0);
     for (const f of r1.s.fighters) for (const k of FIGHTER_FIELDS) expect(Number.isInteger(f[k]), k).toBe(true);
+  });
+});
+
+describe('dash', () => {
+  const st = wisp.stats;
+
+  it('bursts in the held direction faster than running, then runs if held', () => {
+    let s = run(duel(300), 1, Btn.Dash | Btn.Right);
+    expect(s.fighters[0]!.action).toBe(Action.Dash);
+    expect(s.fighters[0]!.vx).toBe(st.dashSpeed);
+    expect(st.dashSpeed).toBeGreaterThan(st.runSpeed);
+    s = run(s, st.dashFrames + 1, Btn.Right);
+    expect(s.fighters[0]!.action).toBe(Action.Run);
+  });
+
+  it('dashes the way you face with no direction, and turns to face a held one', () => {
+    let s = run(duel(300), 1, Btn.Dash);
+    expect(s.fighters[0]!.vx).toBe(st.dashSpeed);
+    s = run(s, st.dashFrames + 1, 0);
+    expect(s.fighters[0]!.action).toBe(Action.Idle);
+    s = run(s, 30, 0);
+    s = run(s, 1, Btn.Dash | Btn.Left);
+    expect(s.fighters[0]!.facing).toBe(-1);
+    expect(s.fighters[0]!.vx).toBe(-st.dashSpeed);
+  });
+
+  it('has a cooldown', () => {
+    let s = run(duel(300), 1, Btn.Dash);
+    s = run(s, st.dashFrames + 1, 0);
+    s = run(s, 1, Btn.Dash); // too soon
+    expect(s.fighters[0]!.action).not.toBe(Action.Dash);
+    s = run(s, st.dashCooldown, 0);
+    s = run(s, 1, Btn.Dash);
+    expect(s.fighters[0]!.action).toBe(Action.Dash);
+  });
+
+  it('can be cancelled into a jump', () => {
+    let s = run(duel(300), 3, (i) => (i === 0 ? Btn.Dash : 0));
+    s = run(s, 1, Btn.Jump);
+    expect(s.fighters[0]!.action).toBe(Action.JumpSquat);
+  });
+});
+
+describe('shield', () => {
+  /** P2 holds shield the whole time. */
+  const shieldHeld = Btn.Dodge;
+
+  it('blocks hits: no damage, shield HP drops, shieldstun and pushback', () => {
+    const s0 = duel();
+    let event = 0;
+    const s = run(s0, 14, (i) => (i === 3 ? Btn.Attack : 0), shieldHeld, (n) => {
+      event = Math.max(event, n.fighters[1]!.event);
+    });
+    const v = s.fighters[1]!;
+    expect(v.damage).toBe(0);
+    expect(event).toBe(SimEvent.ShieldHit);
+    expect(v.shieldHp).toBeLessThan(SHIELD_MAX - 3 * SHIELD_DAMAGE_PER_PERCENT);
+    expect(v.x).toBeGreaterThan(s0.fighters[1]!.x);
+  });
+
+  it('drains while held, breaks into a dizzy state, then recovers', () => {
+    let s = duel(300);
+    let broke = false;
+    s = run(s, Math.ceil(SHIELD_MAX / SHIELD_DECAY) + 5, 0, shieldHeld, (n) => {
+      if (n.fighters[1]!.action === Action.ShieldBreak) broke = true;
+    });
+    expect(broke).toBe(true);
+    s = run(s, SHIELD_BREAK_STUN + 120, 0, 0);
+    expect(s.fighters[1]!.action).toBe(Action.Idle);
+    expect(s.fighters[1]!.shieldHp).toBeGreaterThanOrEqual(SHIELD_BREAK_RESET);
+  });
+
+  it('regenerates once released', () => {
+    let s = run(duel(300), 100, 0, shieldHeld);
+    const low = s.fighters[1]!.shieldHp;
+    s = run(s, 100, 0, 0);
+    expect(s.fighters[1]!.shieldHp).toBeGreaterThan(low);
+  });
+
+  it('releasing right before a hit parries it', () => {
+    // Jab pressed on frame 10 hits on frame 12; shield released on frame 10.
+    let event = 0;
+    const s = run(duel(), 13, (i) => (i === 10 ? Btn.Attack : 0), (i) => (i < 10 ? shieldHeld : 0), (n) => {
+      event = Math.max(event, n.fighters[1]!.event);
+    });
+    expect(event).toBe(SimEvent.Parry);
+    expect(s.fighters[1]!.damage).toBe(0);
+    expect(s.fighters[0]!.hitlag).toBeGreaterThan(s.fighters[1]!.hitlag);
+  });
+
+  it('releasing too early gets you hit', () => {
+    const s = run(duel(), 13, (i) => (i === 10 ? Btn.Attack : 0), (i) => (i < 2 ? shieldHeld : 0));
+    expect(s.fighters[1]!.damage).toBe(3);
+  });
+
+  it('can jump, roll or spot dodge out of shield', () => {
+    const base = run(duel(300), 6, 0, shieldHeld);
+    expect(base.fighters[1]!.action).toBe(Action.Shield);
+    expect(run(base, 1, 0, shieldHeld | Btn.Jump).fighters[1]!.action).toBe(Action.JumpSquat);
+    expect(run(base, 1, 0, shieldHeld | Btn.Right).fighters[1]!.action).toBe(Action.Roll);
+    expect(run(base, 1, 0, shieldHeld | Btn.Down).fighters[1]!.action).toBe(Action.SpotDodge);
+  });
+
+  it('has drop lag when let go', () => {
+    let s = run(duel(300), 6, 0, shieldHeld);
+    s = run(s, 1, 0, 0);
+    expect(s.fighters[1]!.action).toBe(Action.ShieldDrop);
+    s = run(s, SHIELD_DROP_FRAMES, 0, 0);
+    expect(s.fighters[1]!.action).toBe(Action.Idle);
   });
 });

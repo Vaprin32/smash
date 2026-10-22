@@ -4,7 +4,11 @@ import { FIGHTERS } from '../sim/fighters';
 import { ONE } from '../sim/fixed';
 import { STAGES } from '../sim/stage';
 import type { FighterState, MatchState } from '../sim/state';
+import { SHIELD_MAX } from '../sim/rules';
+import { animate } from './animations';
 import type { Camera } from './camera';
+import { LOOKS } from './looks';
+import { drawRig, solveRig } from './skeleton';
 
 /** Per player slot. */
 export const SLOT_COLORS = ['#5ad1e6', '#f08a4b'];
@@ -57,65 +61,41 @@ function drawStage(ctx: CanvasRenderingContext2D, state: MatchState): void {
 function drawFighter(ctx: CanvasRenderingContext2D, state: MatchState, f: FighterState, slot: number): void {
   if (f.action === Action.KO || f.action === Action.Out) return;
   const st = FIGHTERS[f.charId]!.stats;
+  const look = LOOKS[f.charId % LOOKS.length]!;
   const color = slotColor(slot);
   const intangible = isIntangible(f, st);
 
   let x = f.x / ONE;
   const y = f.y / ONE;
-  // Hitlag shake on the victim (derived from state, never written back).
-  if (f.hitlag > 0 && f.action === Action.Hitstun) x += state.frame & 1 ? 3 : -3;
+  // Hitlag / shieldstun shake (derived from state, never written back).
+  if (f.hitlag > 0 && (f.action === Action.Hitstun || f.action === Action.ShieldStun)) x += state.frame & 1 ? 3 : -3;
 
-  let sx = 1, sy = 1;
-  if (f.action === Action.JumpSquat || (f.action === Action.Landing && f.actionFrame < 2)) {
-    sx = 1.15;
-    sy = 0.82;
-  } else if (f.ground < 0 && f.vy < -3 * ONE && f.action !== Action.Hitstun) {
-    sx = 0.9;
-    sy = 1.1;
-  } else if (f.action === Action.SpotDodge) {
-    sx = 1.1;
-    sy = 0.75;
-  }
-  const w = (st.width / ONE) * sx;
-  const h = (st.height / ONE) * sy;
+  drawSwipes(ctx, f, color);
 
-  // Limb reaching toward the move's hitboxes, then the swipe itself.
-  drawAttack(ctx, f, x, y, h, color);
-
-  ctx.save();
-  if (f.invincible > 0 && (state.frame >> 2) & 1) ctx.globalAlpha = 0.45;
-  if (intangible && f.invincible === 0) ctx.globalAlpha = 0.5;
-  if (f.action === Action.SpecialFall) ctx.globalAlpha = 0.75;
-
-  ctx.translate(x, y - h / 2);
-  const speed = Math.abs(f.vx) + Math.abs(f.vy);
-  if (f.action === Action.Hitstun && f.ground < 0 && speed > 8 * ONE) {
-    ctx.rotate(f.actionFrame * 0.35 * -f.facing);
-  }
-
-  ctx.fillStyle = f.action === Action.SpecialFall ? '#7c8592' : color;
-  ctx.strokeStyle = intangible ? '#ffffff' : '#11131f';
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.roundRect(-w / 2, -h / 2, w, h, 10);
-  ctx.fill();
-  ctx.stroke();
+  let alpha = 1;
+  if (f.invincible > 0 && (state.frame >> 2) & 1) alpha = 0.45;
+  if (intangible && f.invincible === 0) alpha = 0.5;
+  const { pose, planted } = animate(f, state);
+  const rig = solveRig(pose, look, planted);
+  drawRig(ctx, rig, look, {
+    x,
+    y,
+    facing: f.facing,
+    color: f.action === Action.SpecialFall ? '#7c8592' : color,
+    alpha,
+    outline: intangible ? '#ffffff' : undefined,
+    time: performance.now(),
+    vx: f.vx / ONE,
+  });
   if (f.action === Action.Hitstun && f.actionFrame < 6) {
-    ctx.fillStyle = 'rgba(255,60,60,0.45)';
+    ctx.fillStyle = 'rgba(255,60,60,0.3)';
+    ctx.beginPath();
+    ctx.arc(x, y - st.height / ONE / 2, st.height / ONE / 2, 0, Math.PI * 2);
     ctx.fill();
   }
 
-  // Facing indicator: a visor on the facing side plus a small nose.
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(f.facing * w * 0.18 - 6, -h * 0.28, 12, 8);
-  ctx.fillStyle = '#11131f';
-  ctx.beginPath();
-  ctx.moveTo((f.facing * w) / 2, -h * 0.1);
-  ctx.lineTo(f.facing * (w / 2 + 9), -h * 0.02);
-  ctx.lineTo((f.facing * w) / 2, h * 0.06);
-  ctx.closePath();
-  ctx.fill();
-  ctx.restore();
+  drawShield(ctx, f, x, y - st.height / ONE / 2, st.height / ONE, color);
+  if (f.action === Action.ShieldBreak && f.ground >= 0) drawDizzy(ctx, x, y - st.height / ONE - 14, state.frame);
 
   if (f.action === Action.Respawn) {
     ctx.fillStyle = 'rgba(255,255,255,0.5)';
@@ -125,39 +105,62 @@ function drawFighter(ctx: CanvasRenderingContext2D, state: MatchState, f: Fighte
   ctx.fillStyle = '#ffffff';
   ctx.font = 'bold 14px system-ui, sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText(`P${slot + 1}`, x, y - h - 10);
+  ctx.fillText(`P${slot + 1}`, x, y - st.height / ONE - 16);
 }
 
-function drawAttack(ctx: CanvasRenderingContext2D, f: FighterState, x: number, y: number, h: number, color: string): void {
-  if (f.action !== Action.Attack) return;
-  const move = FIGHTERS[f.charId]!.moves[f.move]!;
-  const first = move.hitboxes[0];
-  if (!first) return;
-  const lastEnd = Math.max(...move.hitboxes.map((b) => b.end));
-  if (f.actionFrame > lastEnd) return;
-
-  const active = activeHitboxes(f);
-  const target = active[0] ?? first;
-  const tx = x + (f.facing * target.x) / ONE;
-  const ty = y + target.y / ONE;
-  // Wind-up: the limb grows toward the hitbox during startup.
-  const t = active.length > 0 ? 1 : Math.min(1, f.actionFrame / first.start);
-  const cx = x, cy = y - h / 2;
-  ctx.strokeStyle = color;
-  ctx.lineWidth = active.length > 0 ? 10 : 6;
-  ctx.lineCap = 'round';
-  ctx.beginPath();
-  ctx.moveTo(cx, cy);
-  ctx.lineTo(cx + (tx - cx) * t, cy + (ty - cy) * t);
-  ctx.stroke();
-
-  for (const b of active) {
-    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+/** Translucent swipe over each active hitbox, so attacks read without the debug view. */
+function drawSwipes(ctx: CanvasRenderingContext2D, f: FighterState, color: string): void {
+  for (const b of activeHitboxes(f)) {
+    ctx.fillStyle = 'rgba(255,255,255,0.22)';
     ctx.strokeStyle = color;
-    ctx.lineWidth = 3;
+    ctx.globalAlpha = 0.8;
+    ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.arc(x + (f.facing * b.x) / ONE, y + b.y / ONE, b.r / ONE, 0, Math.PI * 2);
+    ctx.arc((f.x + f.facing * b.x) / ONE, (f.y + b.y) / ONE, b.r / ONE, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+}
+
+/** Shield bubble: shrinks with shield HP; fades out while being dropped. */
+function drawShield(ctx: CanvasRenderingContext2D, f: FighterState, cx: number, cy: number, h: number, color: string): void {
+  let fade = 0;
+  if (f.action === Action.Shield || f.action === Action.ShieldStun) fade = 1;
+  else if (f.action === Action.ShieldDrop) fade = Math.max(0, 1 - f.actionFrame / 4);
+  if (fade <= 0) return;
+  const hp = f.shieldHp / SHIELD_MAX;
+  const r = h * (0.25 + 0.4 * hp);
+  ctx.save();
+  ctx.globalAlpha = fade;
+  const g = ctx.createRadialGradient(cx, cy, r * 0.2, cx, cy, r);
+  g.addColorStop(0, 'rgba(255,255,255,0.15)');
+  g.addColorStop(1, color);
+  ctx.fillStyle = g;
+  ctx.globalAlpha = fade * (f.action === Action.ShieldStun ? 0.7 : 0.45);
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = fade;
+  ctx.strokeStyle = f.action === Action.ShieldStun ? '#ffffff' : color;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawDizzy(ctx: CanvasRenderingContext2D, x: number, y: number, frame: number): void {
+  ctx.fillStyle = '#ffe14f';
+  for (let i = 0; i < 3; i++) {
+    const a = frame * 0.12 + (i * Math.PI * 2) / 3;
+    const sx = x + Math.cos(a) * 16;
+    const sy = y + Math.sin(a) * 5;
+    ctx.beginPath();
+    for (let k = 0; k < 10; k++) {
+      const r = k % 2 === 0 ? 5 : 2.2;
+      const ang = (k / 10) * Math.PI * 2 - Math.PI / 2;
+      ctx.lineTo(sx + Math.cos(ang) * r, sy + Math.sin(ang) * r);
+    }
+    ctx.closePath();
+    ctx.fill();
   }
 }

@@ -8,7 +8,9 @@ export interface PlayerKeys {
   jump: string[];
   attack: string[];
   special: string[];
+  /** Shield (hold) / roll / spot dodge / air dodge. */
   dodge: string[];
+  dash: string[];
 }
 
 export const BINDINGS = {
@@ -22,6 +24,7 @@ export const BINDINGS = {
       attack: ['KeyJ'],
       special: ['KeyK'],
       dodge: ['Semicolon'],
+      dash: ['KeyN'],
     },
     {
       left: ['ArrowLeft'],
@@ -32,6 +35,7 @@ export const BINDINGS = {
       attack: ['Numpad1'],
       special: ['Numpad2'],
       dodge: ['Numpad0'],
+      dash: ['Numpad4'],
     },
   ] satisfies PlayerKeys[],
   toggleDebug: 'F1',

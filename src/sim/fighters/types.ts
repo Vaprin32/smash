@@ -15,6 +15,11 @@ export interface FighterStats {
   runDelay: number;
   groundAccel: number;
   groundFriction: number;
+  /** Dash button: starting speed, decaying to runSpeed over dashFrames. */
+  dashSpeed: number;
+  dashFrames: number;
+  /** Frames from the start of a dash until the next one is allowed. */
+  dashCooldown: number;
 
   jumpSquat: number;
   fullHopSpeed: number;

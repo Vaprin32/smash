@@ -23,6 +23,16 @@ export const Action = {
   AirDodge: 13,
   /** Helpless after an up special: can drift, nothing else, until landing. */
   SpecialFall: 14,
+  /** Quick ground burst (Dash button). */
+  Dash: 15,
+  /** Holding shield. */
+  Shield: 16,
+  /** Frozen behind shield after blocking a hit; `hitstun` counts it down. */
+  ShieldStun: 17,
+  /** Letting go of shield; the first PARRY_WINDOW frames parry. */
+  ShieldDrop: 18,
+  /** Shield broke: popped up, then dizzy on the ground while `hitstun` counts down. */
+  ShieldBreak: 19,
 } as const;
 
 export type ActionId = (typeof Action)[keyof typeof Action];
@@ -43,7 +53,29 @@ export const ACTION_NAMES: readonly string[] = [
   'SpotDodge',
   'AirDodge',
   'SpecialFall',
+  'Dash',
+  'Shield',
+  'ShieldStun',
+  'ShieldDrop',
+  'ShieldBreak',
 ];
+
+/** Grounded states that just become Air when the fighter leaves the ground. */
+export function isGroundFree(action: number): boolean {
+  switch (action) {
+    case Action.Idle:
+    case Action.Walk:
+    case Action.Run:
+    case Action.JumpSquat:
+    case Action.Landing:
+    case Action.Dash:
+    case Action.Shield:
+    case Action.ShieldStun:
+    case Action.ShieldDrop:
+      return true;
+  }
+  return false;
+}
 
 export function setAction(f: FighterState, action: ActionId): void {
   f.action = action;

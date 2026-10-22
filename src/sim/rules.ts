@@ -26,3 +26,30 @@ export const HITSTUN_DEN = 2;
 export const KNOCKBACK_DECAY = px(0.3);
 /** Hitting the ground mid-hitstun cuts the remaining hitstun to at most this. */
 export const KNOCKDOWN_HITSTUN = 12;
+
+// Shield (Ultimate-style). Shield HP is in hundredths: 5000 = 50.00.
+export const SHIELD_MAX = 5000;
+/** HP lost per frame while holding shield. */
+export const SHIELD_DECAY = 15;
+/** HP regained per frame while not shielding. */
+export const SHIELD_REGEN = 8;
+/** Shield HP lost per 1% of hit damage (1.19x). */
+export const SHIELD_DAMAGE_PER_PERCENT = 119;
+/** Shieldstun frames = damage * NUM / DEN + BASE. */
+export const SHIELDSTUN_NUM = 3;
+export const SHIELDSTUN_DEN = 5;
+export const SHIELDSTUN_BASE = 2;
+/** Shield pushback speed = base + damage * perPercent (fixed px/frame). */
+export const SHIELD_PUSH_BASE = px(1.2);
+export const SHIELD_PUSH_PER_PERCENT = px(0.18);
+/** Frames of lag after letting go of shield. */
+export const SHIELD_DROP_FRAMES = 11;
+/** Getting hit within this many frames of releasing shield is a parry. */
+export const PARRY_WINDOW = 5;
+/** Extra freeze the attacker suffers when parried. */
+export const PARRY_ATTACKER_LAG = 16;
+/** Upward pop when a shield breaks, and how long the fighter stays dizzy (counted on the ground). */
+export const SHIELD_BREAK_POP = px(8);
+export const SHIELD_BREAK_STUN = 200;
+/** Shield HP after recovering from a break. */
+export const SHIELD_BREAK_RESET = 3000;

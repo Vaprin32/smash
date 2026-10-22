@@ -9,7 +9,8 @@ export const MoveId = {
   FAir: 4,
   DAir: 5,
   UAir: 6,
-  SideSpecial: 7,
+  /** Side / neutral special: a slow, strong heavy attack. */
+  Heavy: 7,
   UpSpecial: 8,
 } as const;
 

@@ -19,6 +19,18 @@ export class Sfx {
     this.blip(160, 0.45, 'sawtooth', 0.16, 50);
   }
 
+  shield(): void {
+    this.blip(900, 0.06, 'triangle', 0.1, 700);
+  }
+
+  parry(): void {
+    this.blip(1400, 0.18, 'sine', 0.16, 2200);
+  }
+
+  shieldBreak(): void {
+    this.blip(600, 0.5, 'sawtooth', 0.16, 80);
+  }
+
   private blip(freq: number, duration: number, type: OscillatorType, volume: number, endFreq = freq * 0.6): void {
     const ctx = this.ctx;
     if (!ctx || ctx.state !== 'running') return;

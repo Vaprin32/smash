@@ -10,6 +10,7 @@ const BUTTON_FOR: [keyof PlayerKeys, number][] = [
   ['attack', Btn.Attack],
   ['special', Btn.Special],
   ['dodge', Btn.Dodge],
+  ['dash', Btn.Dash],
 ];
 
 /**

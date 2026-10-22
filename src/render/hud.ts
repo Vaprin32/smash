@@ -56,7 +56,7 @@ export function drawHud(
   ctx.fillStyle = 'rgba(255,255,255,0.55)';
   ctx.font = '13px system-ui, sans-serif';
   ctx.fillText(
-    'A/D move · L/Space jump · S fast-fall/drop · J attack · K special · ; dodge (+W/A/S/D to aim) · F1 debug · R reset',
+    'A/D move · L/Space jump · N dash · J attack · K heavy (W+K recover) · ; shield (+A/D roll, +S dodge; air dodge in air) · F1 debug · R reset',
     12,
     h - 12,
   );

@@ -72,6 +72,7 @@ export function drawDebugText(ctx: CanvasRenderingContext2D, state: MatchState, 
       `P${i + 1} ${def.name}: ${action}${move} [${f.actionFrame}]   ${f.damage}%`,
       `   pos ${(f.x / ONE).toFixed(1)}, ${(f.y / ONE).toFixed(1)}   vel ${(f.vx / ONE).toFixed(2)}, ${(f.vy / ONE).toFixed(2)}`,
       `   ground ${f.ground}  jumps ${f.jumpsLeft}  ff ${f.fastFall}  hitstun ${f.hitstun}  hitlag ${f.hitlag}  inv ${f.invincible}`,
+      `   shield ${(f.shieldHp / 100).toFixed(1)}  dash cd ${f.dashCooldown}`,
     );
   });
 

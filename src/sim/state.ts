@@ -1,6 +1,7 @@
 import { Action } from './actions';
 import { FIGHTERS } from './fighters';
 import { seedRng } from './rng';
+import { SHIELD_MAX } from './rules';
 import { STAGES } from './stage';
 
 /** Everything about one fighter. Every field is an integer. */
@@ -42,9 +43,14 @@ export interface FighterState {
   /** Buffered Attack/Special/Dodge button bit (0 = none) and frames left on it. */
   actBuffer: number;
   actBufferTimer: number;
-  /** Once-per-airtime flags (1 = used), reset on landing and when hit. */
+  /** Once-per-airtime flag (1 = used), reset on landing and when hit. */
   airDodgeUsed: number;
-  sideSpecialUsed: number;
+  /** Shield health in hundredths (SHIELD_MAX = full). */
+  shieldHp: number;
+  /** Frames until the fighter may dash again. */
+  dashCooldown: number;
+  /** SimEvent that happened to this fighter this frame (cleared every frame). */
+  event: number;
 }
 
 /** Serialization order. Append new fields at the end. */
@@ -75,7 +81,9 @@ export const FIGHTER_FIELDS = [
   'actBuffer',
   'actBufferTimer',
   'airDodgeUsed',
-  'sideSpecialUsed',
+  'shieldHp',
+  'dashCooldown',
+  'event',
 ] as const satisfies readonly (keyof FighterState)[];
 
 export interface MatchState {
@@ -130,7 +138,9 @@ export function createMatch(setup: MatchSetup): MatchState {
         actBuffer: 0,
         actBufferTimer: 0,
         airDodgeUsed: 0,
-        sideSpecialUsed: 0,
+        shieldHp: SHIELD_MAX,
+        dashCooldown: 0,
+        event: 0,
       };
     }),
   };
