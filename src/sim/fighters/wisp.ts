@@ -1,9 +1,11 @@
 import { px } from '../fixed';
+import { WISP_MOVES } from '../moves/wisp';
 import type { FighterDef } from './types';
 
-/** Fast, light and floaty. All of Wisp's movement tuning lives here. */
+/** Fast, light and floaty. All of Wisp's tuning lives here; moves in moves/wisp.ts. */
 export const WISP: FighterDef = {
   name: 'Wisp',
+  moves: WISP_MOVES,
   stats: {
     width: px(36),
     height: px(60),
@@ -29,6 +31,20 @@ export const WISP: FighterDef = {
     airFriction: px(0.06),
 
     landingLag: 3,
+    specialFallLanding: 12,
     dropThroughFrames: 10,
+
+    weight: 85,
+
+    rollFrames: 20,
+    rollSpeed: px(7),
+    rollMoveFrames: 12,
+    rollIntangible: [3, 14],
+    spotDodgeFrames: 18,
+    spotDodgeIntangible: [2, 14],
+    airDodgeFrames: 22,
+    airDodgeIntangible: [2, 14],
+    airDodgeSpeed: px(8),
+    airDodgeDecay: px(0.6),
   },
 };

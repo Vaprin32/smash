@@ -1,4 +1,5 @@
-import { ACTION_NAMES } from '../sim/actions';
+import { Action, ACTION_NAMES } from '../sim/actions';
+import { activeHitboxes, isIntangible } from '../sim/combat';
 import { FIGHTERS } from '../sim/fighters';
 import { ONE } from '../sim/fixed';
 import { STAGES } from '../sim/stage';
@@ -10,7 +11,7 @@ export interface DebugInfo {
   simFps: number;
 }
 
-/** Collision geometry, hurtboxes (yellow) and, from M2, hitboxes (red). */
+/** Collision geometry, hurtboxes (yellow; cyan while intangible) and active hitboxes (red). */
 export function drawDebugWorld(ctx: CanvasRenderingContext2D, state: MatchState, cam: Camera, w: number, h: number): void {
   cam.apply(ctx, w, h);
   const stage = STAGES[state.stageId]!;
@@ -35,15 +36,25 @@ export function drawDebugWorld(ctx: CanvasRenderingContext2D, state: MatchState,
   }
 
   for (const f of state.fighters) {
+    if (f.action === Action.KO || f.action === Action.Out) continue;
     const st = FIGHTERS[f.charId]!.stats;
     const x = f.x / ONE, y = f.y / ONE, fw = st.width / ONE, fh = st.height / ONE;
-    ctx.strokeStyle = '#ffe14f';
+    ctx.strokeStyle = isIntangible(f, st) ? '#4fe3ff' : '#ffe14f';
     ctx.lineWidth = 2 / cam.zoom;
     ctx.strokeRect(x - fw / 2, y - fh, fw, fh);
     ctx.fillStyle = '#ffe14f';
     ctx.beginPath();
     ctx.arc(x, y, 3 / cam.zoom, 0, Math.PI * 2);
     ctx.fill();
+
+    for (const b of activeHitboxes(f)) {
+      ctx.fillStyle = 'rgba(255,40,40,0.35)';
+      ctx.strokeStyle = '#ff2828';
+      ctx.beginPath();
+      ctx.arc(x + (f.facing * b.x) / ONE, y + b.y / ONE, b.r / ONE, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    }
   }
 }
 
@@ -54,17 +65,20 @@ export function drawDebugText(ctx: CanvasRenderingContext2D, state: MatchState, 
     `hash 0x${hashState(state).toString(16).padStart(8, '0')}   rng 0x${(state.rng >>> 0).toString(16)}`,
   ];
   state.fighters.forEach((f, i) => {
+    const def = FIGHTERS[f.charId]!;
+    const action = ACTION_NAMES[f.action] ?? String(f.action);
+    const move = f.action === Action.Attack ? ` ${def.moves[f.move]?.name ?? f.move}` : '';
     lines.push(
-      `P${i + 1} ${FIGHTERS[f.charId]!.name}: ${ACTION_NAMES[f.action] ?? f.action} [${f.actionFrame}]`,
+      `P${i + 1} ${def.name}: ${action}${move} [${f.actionFrame}]   ${f.damage}%`,
       `   pos ${(f.x / ONE).toFixed(1)}, ${(f.y / ONE).toFixed(1)}   vel ${(f.vx / ONE).toFixed(2)}, ${(f.vy / ONE).toFixed(2)}`,
-      `   ground ${f.ground}  jumps ${f.jumpsLeft}  ff ${f.fastFall}  drop ${f.dropTimer}  inv ${f.invincible}  stocks ${f.stocks}`,
+      `   ground ${f.ground}  jumps ${f.jumpsLeft}  ff ${f.fastFall}  hitstun ${f.hitstun}  hitlag ${f.hitlag}  inv ${f.invincible}`,
     );
   });
 
   ctx.font = '13px ui-monospace, Consolas, monospace';
   ctx.textAlign = 'left';
   ctx.fillStyle = 'rgba(0,0,0,0.6)';
-  ctx.fillRect(8, 8, 520, lines.length * 17 + 10);
+  ctx.fillRect(8, 8, 540, lines.length * 17 + 10);
   ctx.fillStyle = '#d6ffd6';
   lines.forEach((l, i) => ctx.fillText(l, 16, 26 + i * 17));
 }

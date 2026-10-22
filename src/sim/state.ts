@@ -33,6 +33,18 @@ export interface FighterState {
   invincible: number;
   /** Last frame's input, for press/release edge detection. */
   prevInput: number;
+  /** MoveId being performed during Action.Attack, else -1. */
+  move: number;
+  /** Bit i set = this move use already hit fighter i. */
+  hitMask: number;
+  /** Duration of the current Action.Landing. */
+  landLag: number;
+  /** Buffered Attack/Special/Dodge button bit (0 = none) and frames left on it. */
+  actBuffer: number;
+  actBufferTimer: number;
+  /** Once-per-airtime flags (1 = used), reset on landing and when hit. */
+  airDodgeUsed: number;
+  sideSpecialUsed: number;
 }
 
 /** Serialization order. Append new fields at the end. */
@@ -57,6 +69,13 @@ export const FIGHTER_FIELDS = [
   'hitlag',
   'invincible',
   'prevInput',
+  'move',
+  'hitMask',
+  'landLag',
+  'actBuffer',
+  'actBufferTimer',
+  'airDodgeUsed',
+  'sideSpecialUsed',
 ] as const satisfies readonly (keyof FighterState)[];
 
 export interface MatchState {
@@ -105,6 +124,13 @@ export function createMatch(setup: MatchSetup): MatchState {
         hitlag: 0,
         invincible: 0,
         prevInput: 0,
+        move: -1,
+        hitMask: 0,
+        landLag: 0,
+        actBuffer: 0,
+        actBufferTimer: 0,
+        airDodgeUsed: 0,
+        sideSpecialUsed: 0,
       };
     }),
   };

@@ -1,3 +1,5 @@
+import type { MoveDef } from '../moves/types';
+
 /**
  * Every tunable movement constant for one fighter. Speeds are fixed-point
  * subpixels per frame, accelerations subpixels per frame², durations in frames.
@@ -33,11 +35,31 @@ export interface FighterStats {
   airFriction: number;
 
   landingLag: number;
+  /** Landing lag after special fall (helpless, e.g. after the up special). */
+  specialFallLanding: number;
   /** Frames platforms are ignored after dropping through one. */
   dropThroughFrames: number;
+
+  /** Knockback is scaled by 100 / weight: lighter fighters fly further. */
+  weight: number;
+
+  rollFrames: number;
+  rollSpeed: number;
+  /** Frames (from 1) during which the roll moves at rollSpeed. */
+  rollMoveFrames: number;
+  rollIntangible: readonly [number, number];
+  spotDodgeFrames: number;
+  spotDodgeIntangible: readonly [number, number];
+  airDodgeFrames: number;
+  airDodgeIntangible: readonly [number, number];
+  /** Burst speed of a directional air dodge; it decays by airDodgeDecay per frame. */
+  airDodgeSpeed: number;
+  airDodgeDecay: number;
 }
 
 export interface FighterDef {
   name: string;
   stats: FighterStats;
+  /** Indexed by MoveId. */
+  moves: readonly MoveDef[];
 }

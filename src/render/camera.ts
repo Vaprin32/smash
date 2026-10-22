@@ -15,6 +15,9 @@ export class Camera {
   y = -120;
   /** Screen pixels per world pixel. */
   zoom = 1;
+  /** Screen-space shake offset in CSS pixels, set by the effects layer. */
+  shakeX = 0;
+  shakeY = 0;
   private initialized = false;
 
   update(state: MatchState, viewW: number, viewH: number): void {
@@ -61,6 +64,7 @@ export class Camera {
 
   /** Set the context transform so drawing uses world pixel coordinates. */
   apply(ctx: CanvasRenderingContext2D, viewW: number, viewH: number): void {
-    ctx.setTransform(this.zoom, 0, 0, this.zoom, viewW / 2 - this.x * this.zoom, viewH / 2 - this.y * this.zoom);
+    const z = this.zoom;
+    ctx.setTransform(z, 0, 0, z, viewW / 2 - this.x * z + this.shakeX, viewH / 2 - this.y * z + this.shakeY);
   }
 }

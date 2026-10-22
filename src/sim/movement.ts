@@ -1,23 +1,39 @@
-// Player control: turns input into actions and velocity changes. Position
+// Player control for the "free" states (idle, walk, run, jump squat, air,
+// landing): turns input into actions and velocity changes. Position
 // integration and collision happen afterwards in physics.ts.
 
 import { Action, setAction } from './actions';
+import { tryStartAction } from './attacks';
 import { approach, clamp } from './fixed';
-import type { FighterStats } from './fighters/types';
+import type { FighterDef, FighterStats } from './fighters/types';
 import { Btn } from './input';
-import { JUMP_BUFFER_FRAMES } from './rules';
+import { ACTION_BUFFER_FRAMES, JUMP_BUFFER_FRAMES } from './rules';
 import { surfaceOf, type StageDef } from './stage';
 import type { FighterState } from './state';
 
-export function controlFighter(f: FighterState, input: number, st: FighterStats, stage: StageDef): void {
-  const pressed = input & ~f.prevInput;
-  const dirX = (input & Btn.Right ? 1 : 0) - (input & Btn.Left ? 1 : 0);
+export function inputDirX(input: number): number {
+  return (input & Btn.Right ? 1 : 0) - (input & Btn.Left ? 1 : 0);
+}
 
+/** Record fresh button presses into the jump and action buffers. */
+export function readButtons(f: FighterState, pressed: number): void {
   if (pressed & Btn.Jump) f.jumpBuffer = JUMP_BUFFER_FRAMES;
   else if (f.jumpBuffer > 0) f.jumpBuffer--;
 
-  if (f.ground >= 0) groundControl(f, input, pressed, dirX, st, stage);
-  else airControl(f, input, pressed, dirX, st);
+  const act = pressed & (Btn.Attack | Btn.Special | Btn.Dodge);
+  if (act) {
+    f.actBuffer = act & -act; // lowest bit wins: Attack > Special > Dodge
+    f.actBufferTimer = ACTION_BUFFER_FRAMES;
+  } else if (f.actBufferTimer > 0) {
+    f.actBufferTimer--;
+    if (f.actBufferTimer === 0) f.actBuffer = 0;
+  }
+}
+
+export function controlFighter(f: FighterState, input: number, pressed: number, def: FighterDef, stage: StageDef): void {
+  const dirX = inputDirX(input);
+  if (f.ground >= 0) groundControl(f, input, pressed, dirX, def, stage);
+  else airControl(f, input, pressed, dirX, def);
 }
 
 function groundControl(
@@ -25,9 +41,10 @@ function groundControl(
   input: number,
   pressed: number,
   dirX: number,
-  st: FighterStats,
+  def: FighterDef,
   stage: StageDef,
 ): void {
+  const st = def.stats;
   if (f.action === Action.JumpSquat) {
     f.actionFrame++;
     f.vx = approach(f.vx, 0, st.groundFriction);
@@ -37,9 +54,11 @@ function groundControl(
   if (f.action === Action.Landing) {
     f.actionFrame++;
     f.vx = approach(f.vx, 0, st.groundFriction);
-    if (f.actionFrame < st.landingLag) return;
+    if (f.actionFrame < f.landLag) return;
     setAction(f, Action.Idle);
   }
+
+  if (tryStartAction(f, input, def, true)) return;
 
   if (f.jumpBuffer > 0) {
     f.jumpBuffer = 0;
@@ -94,7 +113,8 @@ function launchJump(f: FighterState, input: number, st: FighterStats): void {
   setAction(f, Action.Air);
 }
 
-function airControl(f: FighterState, input: number, pressed: number, dirX: number, st: FighterStats): void {
+function airControl(f: FighterState, input: number, pressed: number, dirX: number, def: FighterDef): void {
+  const st = def.stats;
   if (f.action !== Action.Air) setAction(f, Action.Air);
   f.actionFrame++;
   if (f.dropTimer > 0) f.dropTimer--;
@@ -111,6 +131,8 @@ function airControl(f: FighterState, input: number, pressed: number, dirX: numbe
     }
   }
 
+  if (tryStartAction(f, input, def, false)) return;
+
   if (pressed & Btn.Jump && f.jumpsLeft > 0) {
     f.jumpsLeft--;
     f.jumpBuffer = 0;
@@ -120,11 +142,28 @@ function airControl(f: FighterState, input: number, pressed: number, dirX: numbe
     if (dirX !== 0) f.vx = dirX * st.airMaxSpeed;
   }
 
-  if (pressed & Btn.Down && f.vy >= 0) f.fastFall = 1;
+  airMotion(f, input, pressed, st, true, true);
+}
 
-  if (dirX !== 0) f.vx = approach(f.vx, dirX * st.airMaxSpeed, st.airAccel);
-  else f.vx = approach(f.vx, 0, st.airFriction);
-
+/** Air drift, fast-fall and gravity for one frame. */
+export function airMotion(
+  f: FighterState,
+  input: number,
+  pressed: number,
+  st: FighterStats,
+  drift: boolean,
+  gravity: boolean,
+): void {
+  if (f.dropTimer > 0 && f.action !== Action.Air) f.dropTimer--;
+  if (drift) {
+    if (pressed & Btn.Down && f.vy >= 0) f.fastFall = 1;
+    const dirX = inputDirX(input);
+    if (dirX !== 0) f.vx = approach(f.vx, dirX * st.airMaxSpeed, st.airAccel);
+    else f.vx = approach(f.vx, 0, st.airFriction);
+  } else {
+    f.vx = approach(f.vx, 0, st.airFriction);
+  }
+  if (!gravity) return;
   if (f.fastFall) f.vy = st.fastFallSpeed;
   else f.vy = Math.min(f.vy + st.gravity, st.maxFallSpeed);
 }

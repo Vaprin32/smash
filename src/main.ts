@@ -1,7 +1,9 @@
+import { Sfx } from './audio/sfx';
 import { BINDINGS } from './input/bindings';
 import { Keyboard } from './input/keyboard';
 import { Camera } from './render/camera';
 import { drawDebugText, drawDebugWorld } from './render/debug';
+import { Effects } from './render/effects';
 import { drawHud } from './render/hud';
 import { drawWorld } from './render/renderer';
 import { DEFAULT_STOCKS } from './sim/rules';
@@ -10,14 +12,19 @@ import { step } from './sim/step';
 
 const FRAME_MS = 1000 / 60;
 const MAX_STEPS_PER_TICK = 5;
+/** M2: player 2 is a training dummy with no input. */
+const HUD_LABELS = ['', 'dummy'];
 
 const canvas = document.getElementById('game') as HTMLCanvasElement;
 const ctx = canvas.getContext('2d')!;
 const keyboard = new Keyboard(window);
 const camera = new Camera();
+const sfx = new Sfx();
+const effects = new Effects(sfx);
+window.addEventListener('keydown', () => sfx.unlock());
 
 function newMatch(): MatchState {
-  return createMatch({ seed: (Math.random() * 0x100000000) >>> 0, stageId: 0, chars: [0], stocks: DEFAULT_STOCKS });
+  return createMatch({ seed: (Math.random() * 0x100000000) >>> 0, stageId: 0, chars: [0, 0], stocks: DEFAULT_STOCKS });
 }
 
 let state = newMatch();
@@ -54,17 +61,23 @@ function tick(now: number): void {
   while (acc >= FRAME_MS && steps < MAX_STEPS_PER_TICK) {
     const input = keyboard.sample(0);
     keyboard.endFrame();
-    state = step(state, [input]);
+    const prev = state;
+    state = step(state, [input, 0]);
+    effects.onStep(prev, state);
     acc -= FRAME_MS;
     steps++;
   }
   if (steps === MAX_STEPS_PER_TICK) acc = 0; // fell far behind (tab was hidden, etc.)
   simFrames += steps;
 
+  effects.update(dt);
+  camera.shakeX = effects.shakeX * dpr;
+  camera.shakeY = effects.shakeY * dpr;
   camera.update(state, viewW, viewH);
   drawWorld(ctx, state, camera, viewW, viewH);
+  effects.draw(ctx);
   if (debug) drawDebugWorld(ctx, state, camera, viewW, viewH);
-  drawHud(ctx, state, viewW, viewH, dpr);
+  drawHud(ctx, state, viewW, viewH, dpr, HUD_LABELS);
   if (debug) drawDebugText(ctx, state, { renderFps, simFps }, dpr);
 
   renderFrames++;

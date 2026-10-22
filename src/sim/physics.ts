@@ -2,11 +2,13 @@
 // box whose origin is the bottom-center (feet). Standing / landing uses the feet point.
 
 import { Action, setAction } from './actions';
-import type { FighterStats } from './fighters/types';
+import type { FighterDef } from './fighters/types';
+import { KNOCKDOWN_HITSTUN } from './rules';
 import { surfaceOf, type Block, type StageDef } from './stage';
 import type { FighterState } from './state';
 
-export function moveFighter(f: FighterState, st: FighterStats, stage: StageDef): void {
+export function moveFighter(f: FighterState, def: FighterDef, stage: StageDef): void {
+  const st = def.stats;
   const hw = st.width >> 1;
 
   if (f.ground >= 0) {
@@ -18,11 +20,11 @@ export function moveFighter(f: FighterState, st: FighterStats, stage: StageDef):
       f.vy = 0;
       return;
     }
-    // Walked off the edge.
+    // Walked off the edge. Attacks, dodges and hitstun carry on in the air.
     f.ground = -1;
     f.vy = 0;
     f.hopOpen = 0;
-    setAction(f, Action.Air);
+    if (f.action <= Action.Landing) setAction(f, Action.Air);
     return;
   }
 
@@ -35,7 +37,7 @@ export function moveFighter(f: FighterState, st: FighterStats, stage: StageDef):
     const b = stage.blocks[i]!;
     if (!overlaps(f, hw, st.height, b)) continue;
     if (f.vy >= 0 && prevY <= b.top && f.x >= b.left && f.x <= b.right) {
-      land(f, i, b.top, st);
+      land(f, i, b.top, def);
     } else if (f.vy < 0 && prevY - st.height >= b.bottom) {
       f.y = b.bottom + st.height;
       f.vy = 0;
@@ -50,7 +52,7 @@ export function moveFighter(f: FighterState, st: FighterStats, stage: StageDef):
   for (let i = 0; i < stage.blocks.length; i++) {
     const b = stage.blocks[i]!;
     if (f.vy >= 0 && prevY <= b.top && f.y >= b.top && f.x >= b.left && f.x <= b.right) {
-      land(f, i, b.top, st);
+      land(f, i, b.top, def);
       return;
     }
   }
@@ -60,7 +62,7 @@ export function moveFighter(f: FighterState, st: FighterStats, stage: StageDef):
   for (let i = 0; i < stage.platforms.length; i++) {
     const p = stage.platforms[i]!;
     if (prevY <= p.top && f.y >= p.top && f.x >= p.left && f.x <= p.right) {
-      land(f, nb + i, p.top, st);
+      land(f, nb + i, p.top, def);
       return;
     }
   }
@@ -85,7 +87,8 @@ function resolveWallsX(f: FighterState, hw: number, h: number, stage: StageDef):
   }
 }
 
-function land(f: FighterState, ground: number, top: number, st: FighterStats): void {
+function land(f: FighterState, ground: number, top: number, def: FighterDef): void {
+  const st = def.stats;
   f.y = top;
   f.vy = 0;
   f.ground = ground;
@@ -93,5 +96,32 @@ function land(f: FighterState, ground: number, top: number, st: FighterStats): v
   f.fastFall = 0;
   f.hopOpen = 0;
   f.dropTimer = 0;
-  setAction(f, st.landingLag > 0 ? Action.Landing : Action.Idle);
+  f.airDodgeUsed = 0;
+  f.sideSpecialUsed = 0;
+
+  switch (f.action) {
+    case Action.Hitstun:
+      f.hitstun = Math.min(f.hitstun, KNOCKDOWN_HITSTUN);
+      return;
+    case Action.Roll:
+    case Action.SpotDodge:
+      return;
+    case Action.Attack:
+      startLanding(f, def.moves[f.move]!.landingLag ?? st.landingLag);
+      return;
+    case Action.SpecialFall:
+      startLanding(f, st.specialFallLanding);
+      return;
+    default:
+      startLanding(f, st.landingLag);
+  }
+}
+
+function startLanding(f: FighterState, lag: number): void {
+  if (lag > 0) {
+    setAction(f, Action.Landing);
+    f.landLag = lag;
+  } else {
+    setAction(f, Action.Idle);
+  }
 }
