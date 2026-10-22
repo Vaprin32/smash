@@ -27,6 +27,14 @@ export class Sfx {
     this.blip(1400, 0.18, 'sine', 0.16, 2200);
   }
 
+  counter(): void {
+    this.blip(700, 0.25, 'square', 0.12, 1800);
+  }
+
+  grab(): void {
+    this.blip(260, 0.08, 'triangle', 0.14, 180);
+  }
+
   shieldBreak(): void {
     this.blip(600, 0.5, 'sawtooth', 0.16, 80);
   }

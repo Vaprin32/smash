@@ -8,4 +8,6 @@ export const SimEvent = {
   Parry: 3,
   ShieldBreak: 4,
   KO: 5,
+  Counter: 6,
+  Grab: 7,
 } as const;

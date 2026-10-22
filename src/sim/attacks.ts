@@ -1,4 +1,11 @@
-// Starting and running attacks, specials and dodges.
+// Starting and running attacks, specials, grabs and dodges.
+//
+// Input layout (Smash Ultimate style):
+//   J ground: jab combo / side, up, down tilt / dash attack (while dashing or running)
+//   J air:    neutral / forward / back / up / down air (back air keeps facing)
+//   K ground: forward / up / down smash (hold K to charge)
+//   K air and I anywhere: neutral / side / up / down special
+//   Shield (;) + J: grab. While holding: J pummel, a direction throws that way.
 
 import { Action, setAction } from './actions';
 import { approach } from './fixed';
@@ -6,15 +13,18 @@ import type { FighterDef } from './fighters/types';
 import { Btn } from './input';
 import { MoveId, type MoveIdValue } from './moves/types';
 import { airMotion, inputDirX } from './movement';
+import { GRAB_MASH_FRAMES, MAX_SMASH_CHARGE } from './rules';
 import type { FighterState } from './state';
 
 /** 1/sqrt(2) in 8-bit fixed point, for diagonal air dodges. */
 const DIAGONAL = 181;
+/** Frames after a grab connects before a held direction throws. */
+const THROW_INPUT_DELAY = 3;
 
 /**
- * Consume a buffered Attack / Special / Dodge / Dash press if the fighter can
- * act. Directions are read from the current input; `pressed` is this frame's
- * fresh presses. Returns true if something started.
+ * Consume a buffered button press if the fighter can act. Directions are read
+ * from the current input; `pressed` is this frame's fresh presses. Returns
+ * true if something started.
  */
 export function tryStartAction(
   f: FighterState,
@@ -35,22 +45,31 @@ export function tryStartAction(
 
   if (btn === Btn.Attack) {
     if (grounded) {
-      if (down) startMove(f, MoveId.DTilt);
+      if (input & Btn.Dodge) startMove(f, MoveId.Grab);
+      else if (f.action === Action.Run || f.action === Action.Dash) startMove(f, MoveId.DashAttack);
+      else if (up) startMove(f, MoveId.UTilt);
+      else if (down) startMove(f, MoveId.DTilt);
       else if (dirX !== 0) startMove(f, MoveId.FTilt, dirX);
-      else startMove(f, MoveId.Jab);
+      else startMove(f, MoveId.Jab1);
     } else {
       if (up) startMove(f, MoveId.UAir);
       else if (down) startMove(f, MoveId.DAir);
-      else if (dirX !== 0) startMove(f, MoveId.FAir, dirX);
+      else if (dirX === f.facing) startMove(f, MoveId.FAir);
+      else if (dirX !== 0) startMove(f, MoveId.BAir);
       else startMove(f, MoveId.NAir);
     }
     return true;
   }
 
-  if (btn === Btn.Special) {
-    startMove(f, up ? MoveId.UpSpecial : MoveId.Heavy, up ? 0 : dirX);
+  if (btn === Btn.Heavy) {
+    if (!grounded) return startSpecial(f, up, down, dirX, def, grounded);
+    if (up) startMove(f, MoveId.USmash);
+    else if (down) startMove(f, MoveId.DSmash);
+    else startMove(f, MoveId.FSmash, dirX);
     return true;
   }
+
+  if (btn === Btn.Special) return startSpecial(f, up, down, dirX, def, grounded);
 
   if (btn === Btn.Dash) {
     if (!grounded || f.dashCooldown > 0) return false;
@@ -86,27 +105,60 @@ export function tryStartAction(
   return false;
 }
 
+function startSpecial(f: FighterState, up: boolean, down: boolean, dirX: number, def: FighterDef, grounded: boolean): boolean {
+  if (up) {
+    startMove(f, MoveId.UpSpecial);
+  } else if (down) {
+    startMove(f, MoveId.DownSpecial);
+  } else if (dirX !== 0) {
+    if (!grounded && def.moves[MoveId.SideSpecial]!.oncePerAir) {
+      if (f.sideSpecialUsed) return false;
+      f.sideSpecialUsed = 1;
+    }
+    startMove(f, MoveId.SideSpecial, dirX);
+  } else {
+    startMove(f, MoveId.NSpecial);
+  }
+  return true;
+}
+
 export function startRoll(f: FighterState, dir: number, def: FighterDef): void {
   setAction(f, Action.Roll);
   f.vx = dir * def.stats.rollSpeed;
 }
 
 /** `turnTo` (if non-zero) makes the fighter face that way first. */
-function startMove(f: FighterState, move: MoveIdValue, turnTo = 0): void {
+export function startMove(f: FighterState, move: MoveIdValue, turnTo = 0): void {
   if (turnTo !== 0) f.facing = turnTo;
   setAction(f, Action.Attack);
   f.move = move;
   f.hitMask = 0;
   f.hopOpen = 0;
+  f.charge = 0;
 }
 
 export function updateAttack(f: FighterState, input: number, pressed: number, def: FighterDef): void {
   const st = def.stats;
   const m = def.moves[f.move]!;
+
+  // Smash charge: holding the heavy button freezes the move on its charge frame.
+  if (
+    m.chargeFrame !== undefined &&
+    f.actionFrame === m.chargeFrame &&
+    input & Btn.Heavy &&
+    f.charge < MAX_SMASH_CHARGE
+  ) {
+    f.charge++;
+    f.vx = approach(f.vx, 0, st.groundFriction);
+    return;
+  }
+
   f.actionFrame++;
 
   if (f.actionFrame > m.total) {
-    if (f.ground >= 0) {
+    if (m.pummel && f.grabTarget >= 0) {
+      setAction(f, Action.Holding);
+    } else if (f.ground >= 0) {
       setAction(f, Action.Idle);
       f.vx = approach(f.vx, 0, st.groundFriction);
     } else {
@@ -114,6 +166,28 @@ export function updateAttack(f: FighterState, input: number, pressed: number, de
       airMotion(f, input, pressed, st, true, true);
     }
     return;
+  }
+
+  // Jab combo: attack pressed in the window continues into the next hit.
+  if (
+    m.next &&
+    f.actionFrame >= m.next.from &&
+    f.actionFrame <= m.next.to &&
+    f.actBufferTimer > 0 &&
+    f.actBuffer === Btn.Attack
+  ) {
+    f.actBuffer = 0;
+    f.actBufferTimer = 0;
+    startMove(f, m.next.move);
+    return;
+  }
+
+  if (m.projectile && f.actionFrame === m.projectile.frame && f.projLife === 0) {
+    const pr = m.projectile;
+    f.projLife = pr.life;
+    f.projX = f.x + f.facing * pr.x;
+    f.projY = f.y + pr.y;
+    f.projVx = f.facing * pr.speed;
   }
 
   if (m.impulses) {
@@ -141,6 +215,30 @@ export function updateAttack(f: FighterState, input: number, pressed: number, de
   // Down+Attack aims a down air; that same press shouldn't also fast-fall.
   const ffPressed = f.actionFrame === 1 ? pressed & ~Btn.Down : pressed;
   airMotion(f, input, ffPressed, st, !m.noDrift, gravity);
+}
+
+/** Holding a grabbed fighter: J pummels, a held direction throws that way. */
+export function updateHolding(f: FighterState, input: number, def: FighterDef): void {
+  f.actionFrame++;
+  f.vx = approach(f.vx, 0, def.stats.groundFriction);
+  if (f.actBufferTimer > 0 && f.actBuffer === Btn.Attack) {
+    f.actBuffer = 0;
+    f.actBufferTimer = 0;
+    startMove(f, MoveId.Pummel);
+    return;
+  }
+  if (f.actionFrame < THROW_INPUT_DELAY) return;
+  const dirX = inputDirX(input);
+  if (input & Btn.Up) startMove(f, MoveId.UThrow);
+  else if (input & Btn.Down) startMove(f, MoveId.DThrow);
+  else if (dirX === f.facing) startMove(f, MoveId.FThrow);
+  else if (dirX !== 0) startMove(f, MoveId.BThrow);
+}
+
+/** Being held: count down to breaking free; every fresh press mashes it down faster. */
+export function updateHeld(f: FighterState, pressed: number): void {
+  f.actionFrame++;
+  f.grabTimer -= pressed ? 1 + GRAB_MASH_FRAMES : 1;
 }
 
 export function updateDodge(f: FighterState, input: number, pressed: number, def: FighterDef): void {

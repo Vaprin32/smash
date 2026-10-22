@@ -7,6 +7,8 @@ export interface PlayerKeys {
   down: string[];
   jump: string[];
   attack: string[];
+  /** Smash attacks on the ground, specials in the air. */
+  heavy: string[];
   special: string[];
   /** Shield (hold) / roll / spot dodge / air dodge. */
   dodge: string[];
@@ -22,7 +24,8 @@ export const BINDINGS = {
       down: ['KeyS'],
       jump: ['KeyL', 'Space'],
       attack: ['KeyJ'],
-      special: ['KeyK'],
+      heavy: ['KeyK'],
+      special: ['KeyI'],
       dodge: ['Semicolon'],
       dash: ['KeyN'],
     },
@@ -33,7 +36,8 @@ export const BINDINGS = {
       down: ['ArrowDown'],
       jump: ['Numpad3'],
       attack: ['Numpad1'],
-      special: ['Numpad2'],
+      heavy: ['Numpad2'],
+      special: ['Numpad5'],
       dodge: ['Numpad0'],
       dash: ['Numpad4'],
     },

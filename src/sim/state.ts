@@ -43,8 +43,22 @@ export interface FighterState {
   /** Buffered Attack/Special/Dodge button bit (0 = none) and frames left on it. */
   actBuffer: number;
   actBufferTimer: number;
-  /** Once-per-airtime flag (1 = used), reset on landing and when hit. */
+  /** Once-per-airtime flags (1 = used), reset on landing and when hit. */
   airDodgeUsed: number;
+  sideSpecialUsed: number;
+  /** Frames a smash attack has been charged. */
+  charge: number;
+  /** Index of the fighter this one is holding, or -1. */
+  grabTarget: number;
+  /** Index of the fighter holding this one, or -1. */
+  heldBy: number;
+  /** While held: frames until breaking free. */
+  grabTimer: number;
+  /** One projectile per fighter: frames left (0 = none), position and speed. */
+  projLife: number;
+  projX: number;
+  projY: number;
+  projVx: number;
   /** Shield health in hundredths (SHIELD_MAX = full). */
   shieldHp: number;
   /** Frames until the fighter may dash again. */
@@ -81,6 +95,15 @@ export const FIGHTER_FIELDS = [
   'actBuffer',
   'actBufferTimer',
   'airDodgeUsed',
+  'sideSpecialUsed',
+  'charge',
+  'grabTarget',
+  'heldBy',
+  'grabTimer',
+  'projLife',
+  'projX',
+  'projY',
+  'projVx',
   'shieldHp',
   'dashCooldown',
   'event',
@@ -138,6 +161,15 @@ export function createMatch(setup: MatchSetup): MatchState {
         actBuffer: 0,
         actBufferTimer: 0,
         airDodgeUsed: 0,
+        sideSpecialUsed: 0,
+        charge: 0,
+        grabTarget: -1,
+        heldBy: -1,
+        grabTimer: 0,
+        projLife: 0,
+        projX: 0,
+        projY: 0,
+        projVx: 0,
         shieldHp: SHIELD_MAX,
         dashCooldown: 0,
         event: 0,

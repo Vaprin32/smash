@@ -53,3 +53,22 @@ export const SHIELD_BREAK_POP = px(8);
 export const SHIELD_BREAK_STUN = 200;
 /** Shield HP after recovering from a break. */
 export const SHIELD_BREAK_RESET = 3000;
+
+// Smash attack charge (Ultimate: up to 60 frames for 1.4x).
+export const MAX_SMASH_CHARGE = 60;
+/** Charged damage/base knockback = value * (CHARGE_DEN + charge) / CHARGE_DEN. */
+export const CHARGE_DEN = 150;
+
+// Grabs.
+/** Distance in front of the grabber where the held fighter is kept. */
+export const GRAB_HOLD_DISTANCE = px(26);
+/** Frames a grabbed fighter is held: base + damage / divisor, capped. Mashing shortens it. */
+export const GRAB_HOLD_BASE = 60;
+export const GRAB_HOLD_DAMAGE_DIVISOR = 2;
+export const GRAB_HOLD_MAX = 200;
+export const GRAB_MASH_FRAMES = 4;
+/** Both fighters slide apart at this speed when the held fighter breaks free. */
+export const GRAB_RELEASE_SPEED = px(4);
+
+/** How long an attacker is frozen when their hit is countered. */
+export const COUNTER_FREEZE = 18;

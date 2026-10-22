@@ -1,17 +1,37 @@
 import { px } from '../fixed';
 
-/** Move slots. Every fighter's moveset is an array indexed by these. */
+/**
+ * Move slots, following Smash Ultimate's moveset layout. Every fighter's
+ * moveset is an array indexed by these. Append only (it's part of the state).
+ */
 export const MoveId = {
-  Jab: 0,
-  FTilt: 1,
-  DTilt: 2,
-  NAir: 3,
-  FAir: 4,
-  DAir: 5,
-  UAir: 6,
-  /** Side / neutral special: a slow, strong heavy attack. */
-  Heavy: 7,
-  UpSpecial: 8,
+  Jab1: 0,
+  Jab2: 1,
+  Jab3: 2,
+  FTilt: 3,
+  UTilt: 4,
+  DTilt: 5,
+  DashAttack: 6,
+  FSmash: 7,
+  USmash: 8,
+  DSmash: 9,
+  NAir: 10,
+  FAir: 11,
+  BAir: 12,
+  UAir: 13,
+  DAir: 14,
+  NSpecial: 15,
+  SideSpecial: 16,
+  UpSpecial: 17,
+  DownSpecial: 18,
+  /** Follow-up attack when the down special counter catches a hit. */
+  CounterStrike: 19,
+  Grab: 20,
+  Pummel: 21,
+  FThrow: 22,
+  BThrow: 23,
+  UThrow: 24,
+  DThrow: 25,
 } as const;
 
 export type MoveIdValue = (typeof MoveId)[keyof typeof MoveId];
@@ -30,7 +50,7 @@ export interface HitboxDef {
   baseKb: number;
   /** Launch speed added per 100% of victim damage, fixed px/frame. */
   kbGrowth: number;
-  /** Launch angle in degrees: 0 = forward, 90 = up, 270 = down. */
+  /** Launch angle in degrees relative to the attacker's facing: 0 = forward, 90 = up, 180 = backward, 270 = down. */
   angle: number;
 }
 
@@ -43,6 +63,28 @@ export interface ImpulseDef {
   vy?: number;
   /** Applied only when airborne. */
   airVy?: number;
+}
+
+export interface GrabboxDef {
+  start: number;
+  end: number;
+  x: number;
+  y: number;
+  r: number;
+}
+
+export interface ProjectileDef {
+  /** Move frame on which it spawns. */
+  frame: number;
+  /** Spawn offset from the feet (x relative to facing), fixed point. */
+  x: number;
+  y: number;
+  /** Horizontal speed, fixed px/frame. */
+  speed: number;
+  /** Frames before it fizzles. */
+  life: number;
+  /** What it does on contact; start/end/x/y are unused. */
+  hit: HitboxDef;
 }
 
 export interface MoveDef {
@@ -60,6 +102,20 @@ export interface MoveDef {
   noDrift?: boolean;
   /** Enter special fall (helpless) when the move ends in the air. */
   helplessAfter?: boolean;
+  /** Once per airtime when used in the air (side special). */
+  oncePerAir?: boolean;
+  /** Smash attack: holding the button freezes the move on this frame to charge it. */
+  chargeFrame?: number;
+  /** Pressing attack between move frames `from` and `to` continues into `move` (jab combo). */
+  next?: { move: MoveIdValue; from: number; to: number };
+  grabbox?: GrabboxDef;
+  /** Pummel: deals `damage` to the held fighter on `frame`, then goes back to holding. */
+  pummel?: { frame: number; damage: number };
+  /** Throw: releases and launches the held fighter on `frame`. */
+  throw?: { frame: number; hit: HitboxDef };
+  projectile?: ProjectileDef;
+  /** Counter window (inclusive move frames): getting hit then triggers CounterStrike instead. */
+  counter?: readonly [number, number];
 }
 
 /** Helper so move files can be written in pixels. */
@@ -84,4 +140,13 @@ export function hitbox(h: {
     kbGrowth: px(h.growth),
     angle: h.angle,
   };
+}
+
+/** Knockback-only hit (throws, projectiles) in pixel units. */
+export function launch(damage: number, kb: number, growth: number, angle: number, r = 0): HitboxDef {
+  return hitbox({ frames: [0, 0], x: 0, y: 0, r, damage, kb, growth, angle });
+}
+
+export function grabbox(g: { frames: [number, number]; x: number; y: number; r: number }): GrabboxDef {
+  return { start: g.frames[0], end: g.frames[1], x: px(g.x), y: px(g.y), r: px(g.r) };
 }

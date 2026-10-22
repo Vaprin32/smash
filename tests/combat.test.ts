@@ -77,11 +77,11 @@ describe('move data', () => {
 describe('hitting the dummy', () => {
   it('jab hits once per use, adds damage, and causes hitstun', () => {
     let s = run(duel(), 4, tap(Btn.Attack));
-    expect(s.fighters[1]!.damage).toBe(3);
+    expect(s.fighters[1]!.damage).toBe(2);
     expect(s.fighters[1]!.action).toBe(Action.Hitstun);
     expect(s.fighters[0]!.hitMask & 2).toBe(2);
     s = run(s, 30, 0);
-    expect(s.fighters[1]!.damage).toBe(3); // didn't hit twice
+    expect(s.fighters[1]!.damage).toBe(2); // didn't hit twice
   });
 
   it('hitlag freezes both fighters, then the victim launches', () => {
@@ -150,8 +150,8 @@ describe('hitting the dummy', () => {
 
   it('simultaneous hits trade', () => {
     const s = run(duel(), 6, tap(Btn.Attack), tap(Btn.Attack));
-    expect(s.fighters[0]!.damage).toBe(3);
-    expect(s.fighters[1]!.damage).toBe(3);
+    expect(s.fighters[0]!.damage).toBe(2);
+    expect(s.fighters[1]!.damage).toBe(2);
   });
 });
 
@@ -219,12 +219,12 @@ describe('specials and aerials', () => {
     expect(s.fighters[0]!.action).toBe(Action.SpecialFall);
   });
 
-  it('the heavy hits hard but barely moves the attacker', () => {
+  it('the forward smash hits hard but barely moves the attacker', () => {
     const s0 = duel(60);
     const x0 = s0.fighters[0]!.x;
     let maxStep = 0;
     let launch = 0;
-    run(s0, 40, tap(Btn.Special), 0, (n) => {
+    run(s0, 40, tap(Btn.Heavy), 0, (n) => {
       maxStep = Math.max(maxStep, n.fighters[0]!.x - x0);
       if (n.fighters[1]!.action === Action.Hitstun) launch = Math.max(launch, Math.abs(n.fighters[1]!.vx));
     });
@@ -233,12 +233,12 @@ describe('specials and aerials', () => {
     expect(launch).toBeGreaterThan(Math.abs(ftilt.fighters[1]!.vx));
   });
 
-  it('the heavy can be used repeatedly in the air', () => {
+  it('K in the air does specials', () => {
     const s0 = duel(300);
     s0.fighters[0]!.x = 0;
     let s = run(s0, 8, Btn.Jump);
-    s = run(s, 1, Btn.Special);
-    expect(s.fighters[0]!.move).toBe(MoveId.Heavy);
+    s = run(s, 1, Btn.Heavy);
+    expect(s.fighters[0]!.move).toBe(MoveId.NSpecial);
   });
 
   it('landing mid-aerial uses the move landing lag', () => {
@@ -268,7 +268,7 @@ describe('specials and aerials', () => {
     expect(r.fighters[0]!.action).toBe(Action.Landing);
     r = run(r, wisp.stats.landingLag, (i) => (i === 0 ? Btn.Attack : 0));
     expect(r.fighters[0]!.action).toBe(Action.Attack);
-    expect(r.fighters[0]!.move).toBe(MoveId.Jab);
+    expect(r.fighters[0]!.move).toBe(MoveId.Jab1);
   });
 });
 
@@ -351,7 +351,7 @@ describe('shield', () => {
     const v = s.fighters[1]!;
     expect(v.damage).toBe(0);
     expect(event).toBe(SimEvent.ShieldHit);
-    expect(v.shieldHp).toBeLessThan(SHIELD_MAX - 3 * SHIELD_DAMAGE_PER_PERCENT);
+    expect(v.shieldHp).toBeLessThan(SHIELD_MAX - 2 * SHIELD_DAMAGE_PER_PERCENT);
     expect(v.x).toBeGreaterThan(s0.fighters[1]!.x);
   });
 
@@ -387,7 +387,7 @@ describe('shield', () => {
 
   it('releasing too early gets you hit', () => {
     const s = run(duel(), 13, (i) => (i === 10 ? Btn.Attack : 0), (i) => (i < 2 ? shieldHeld : 0));
-    expect(s.fighters[1]!.damage).toBe(3);
+    expect(s.fighters[1]!.damage).toBe(2);
   });
 
   it('can jump, roll or spot dodge out of shield', () => {

@@ -61,6 +61,14 @@ export class Effects {
           this.shake(14);
           this.sfx.shieldBreak();
           break;
+        case SimEvent.Counter:
+          this.sparks.push({ kind: 'parry', x, y, size: 50, ageMs: 0 });
+          this.shake(6);
+          this.sfx.counter();
+          break;
+        case SimEvent.Grab:
+          this.sfx.grab();
+          break;
         case SimEvent.KO:
           this.shake(22);
           this.sfx.ko();

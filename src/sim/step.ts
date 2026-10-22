@@ -1,5 +1,5 @@
 import { Action, setAction } from './actions';
-import { updateAttack, updateDodge, updateSpecialFall } from './attacks';
+import { updateAttack, updateDodge, updateHeld, updateHolding, updateSpecialFall } from './attacks';
 import { resolveHits, updateHitstun } from './combat';
 import { FIGHTERS } from './fighters';
 import type { FighterDef } from './fighters/types';
@@ -15,6 +15,8 @@ import {
   SHIELD_REGEN,
 } from './rules';
 import { isShieldAction, updateShield, updateShieldBreak } from './shield';
+import { updateGrabs } from './grabs';
+import { updateProjectiles } from './projectiles';
 import { STAGES, type StageDef } from './stage';
 import { cloneState, type FighterState, type MatchState } from './state';
 
@@ -32,6 +34,8 @@ export function step(prev: MatchState, inputs: readonly InputBits[]): MatchState
     updateFighter(f, i, input, stage);
     f.prevInput = input;
   }
+  updateProjectiles(s, stage);
+  updateGrabs(s);
   resolveHits(s);
   s.frame++;
   return s;
@@ -62,6 +66,11 @@ function updateFighter(f: FighterState, slot: number, input: number, stage: Stag
   if (!isShieldAction(f.action)) f.shieldHp = Math.min(SHIELD_MAX, f.shieldHp + SHIELD_REGEN);
   readButtons(f, pressed);
 
+  if (f.action === Action.Held) {
+    updateHeld(f, pressed); // positioned by the holder in updateGrabs
+    return;
+  }
+
   switch (f.action) {
     case Action.Hitstun:
       updateHitstun(f, def.stats);
@@ -84,6 +93,9 @@ function updateFighter(f: FighterState, slot: number, input: number, stage: Stag
       break;
     case Action.ShieldBreak:
       updateShieldBreak(f, def);
+      break;
+    case Action.Holding:
+      updateHolding(f, input, def);
       break;
     default:
       controlFighter(f, input, pressed, def, stage);
@@ -128,6 +140,11 @@ function respawn(f: FighterState, slot: number, def: FighterDef, stage: StageDef
   f.airDodgeUsed = 0;
   f.shieldHp = SHIELD_MAX;
   f.dashCooldown = 0;
+  f.sideSpecialUsed = 0;
+  f.charge = 0;
+  f.grabTarget = -1;
+  f.heldBy = -1;
+  f.grabTimer = 0;
   f.hitstun = 0;
   f.hitlag = 0;
   f.invincible = RESPAWN_INVINCIBILITY;

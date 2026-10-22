@@ -32,10 +32,13 @@ export function updateShield(f: FighterState, input: number, pressed: number, de
         setAction(f, Action.JumpSquat);
         return;
       }
-      // Up special out of shield; other buffered presses wait.
-      if (f.actBufferTimer > 0 && f.actBuffer === Btn.Special && input & Btn.Up) {
-        tryStartAction(f, input, pressed, def, true);
-        return;
+      // Out of shield: J grabs, K+up up smash, I+up up special. Other presses wait.
+      if (f.actBufferTimer > 0) {
+        const b = f.actBuffer;
+        if (b === Btn.Attack || ((b === Btn.Heavy || b === Btn.Special) && input & Btn.Up)) {
+          tryStartAction(f, input, pressed, def, true);
+          return;
+        }
       }
       const rollDir = inputDirX(pressed);
       if (rollDir !== 0) {

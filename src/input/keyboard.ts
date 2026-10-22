@@ -8,6 +8,7 @@ const BUTTON_FOR: [keyof PlayerKeys, number][] = [
   ['down', Btn.Down],
   ['jump', Btn.Jump],
   ['attack', Btn.Attack],
+  ['heavy', Btn.Heavy],
   ['special', Btn.Special],
   ['dodge', Btn.Dodge],
   ['dash', Btn.Dash],

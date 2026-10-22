@@ -28,6 +28,7 @@ export function drawWorld(ctx: CanvasRenderingContext2D, state: MatchState, cam:
   cam.apply(ctx, w, h);
   drawStage(ctx, state);
   state.fighters.forEach((f, i) => drawFighter(ctx, state, f, i));
+  state.fighters.forEach((f, i) => drawProjectile(ctx, f, i));
 }
 
 function drawStage(ctx: CanvasRenderingContext2D, state: MatchState): void {
@@ -72,10 +73,13 @@ function drawFighter(ctx: CanvasRenderingContext2D, state: MatchState, f: Fighte
 
   drawSwipes(ctx, f, color);
 
+  const { pose, planted, charging } = animate(f, state);
+  // Charging a smash: tremble.
+  if (charging > 0) x += Math.sin(performance.now() * 0.08) * (1 + charging * 2);
+
   let alpha = 1;
   if (f.invincible > 0 && (state.frame >> 2) & 1) alpha = 0.45;
   if (intangible && f.invincible === 0) alpha = 0.5;
-  const { pose, planted } = animate(f, state);
   const rig = solveRig(pose, look, planted);
   drawRig(ctx, rig, look, {
     x,
@@ -87,6 +91,14 @@ function drawFighter(ctx: CanvasRenderingContext2D, state: MatchState, f: Fighte
     time: performance.now(),
     vx: f.vx / ONE,
   });
+  if (charging > 0) {
+    // Pulsing glow that grows with charge.
+    const pulse = 0.25 + 0.25 * Math.sin(performance.now() * 0.025);
+    ctx.fillStyle = `rgba(255,240,170,${(pulse * (0.4 + charging)).toFixed(3)})`;
+    ctx.beginPath();
+    ctx.arc(x, y - st.height / ONE / 2, st.height / ONE / 2 + 6 * charging, 0, Math.PI * 2);
+    ctx.fill();
+  }
   if (f.action === Action.Hitstun && f.actionFrame < 6) {
     ctx.fillStyle = 'rgba(255,60,60,0.3)';
     ctx.beginPath();
@@ -106,6 +118,26 @@ function drawFighter(ctx: CanvasRenderingContext2D, state: MatchState, f: Fighte
   ctx.font = 'bold 14px system-ui, sans-serif';
   ctx.textAlign = 'center';
   ctx.fillText(`P${slot + 1}`, x, y - st.height / ONE - 16);
+}
+
+/** Wind Bolt: a small spinning gust. */
+function drawProjectile(ctx: CanvasRenderingContext2D, f: FighterState, slot: number): void {
+  if (f.projLife <= 0) return;
+  const x = f.projX / ONE, y = f.projY / ONE;
+  const spin = performance.now() * 0.02 * Math.sign(f.projVx || 1);
+  ctx.save();
+  ctx.strokeStyle = slotColor(slot);
+  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(x, y, 11, 0, Math.PI * 2);
+  ctx.fill();
+  for (let k = 0; k < 3; k++) {
+    ctx.beginPath();
+    ctx.arc(x, y, 6 + k * 3, spin + k * 2, spin + k * 2 + 2.2);
+    ctx.stroke();
+  }
+  ctx.restore();
 }
 
 /** Translucent swipe over each active hitbox, so attacks read without the debug view. */

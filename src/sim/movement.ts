@@ -20,9 +20,9 @@ export function readButtons(f: FighterState, pressed: number): void {
   if (pressed & Btn.Jump) f.jumpBuffer = JUMP_BUFFER_FRAMES;
   else if (f.jumpBuffer > 0) f.jumpBuffer--;
 
-  const act = pressed & (Btn.Attack | Btn.Special | Btn.Dodge | Btn.Dash);
+  const act = pressed & (Btn.Attack | Btn.Heavy | Btn.Dodge | Btn.Dash | Btn.Special);
   if (act) {
-    f.actBuffer = act & -act; // lowest bit wins: Attack > Special > Dodge > Dash
+    f.actBuffer = act & -act; // lowest bit wins: Attack > Heavy > Dodge > Dash > Special
     f.actBufferTimer = ACTION_BUFFER_FRAMES;
   } else if (f.actBufferTimer > 0) {
     f.actBufferTimer--;

@@ -33,6 +33,10 @@ export const Action = {
   ShieldDrop: 18,
   /** Shield broke: popped up, then dizzy on the ground while `hitstun` counts down. */
   ShieldBreak: 19,
+  /** Holding a grabbed fighter (`grabTarget`); pummel or throw from here. */
+  Holding: 20,
+  /** Being held by `heldBy`; mash to escape before `grabTimer` runs out. */
+  Held: 21,
 } as const;
 
 export type ActionId = (typeof Action)[keyof typeof Action];
@@ -58,6 +62,8 @@ export const ACTION_NAMES: readonly string[] = [
   'ShieldStun',
   'ShieldDrop',
   'ShieldBreak',
+  'Holding',
+  'Held',
 ];
 
 /** Grounded states that just become Air when the fighter leaves the ground. */
