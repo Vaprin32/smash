@@ -1,6 +1,7 @@
 import { Sfx } from './audio/sfx';
 import { Controls } from './input/controls';
 import { Keyboard } from './input/keyboard';
+import { loadKeyboardLayout } from './input/keyLabels';
 import { App } from './ui/app';
 import type { View } from './ui/draw';
 
@@ -13,6 +14,7 @@ const keyboard = new Keyboard(window);
 const sfx = new Sfx();
 const app = new App(new Controls(keyboard), sfx);
 window.addEventListener('keydown', () => sfx.unlock());
+void loadKeyboardLayout(); // key labels for the user's keyboard; until then US labels
 window.addEventListener('pointerdown', () => sfx.unlock());
 
 const view: View = { w: 0, h: 0, dpr: 1 };

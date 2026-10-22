@@ -1,3 +1,4 @@
+import { keysSummary } from '../input/keyLabels';
 import { idlePose } from '../render/animations';
 import { fighterColor, lookOf, slotColor } from '../render/renderer';
 import { tint } from '../render/skeleton';
@@ -192,7 +193,7 @@ export class CharSelectScreen implements Screen {
   private deviceLine(slot: number): string {
     if (this.mode === 'training' && slot === 1) return 'Stands still · chosen by P1';
     const pads = this.app.controls.padsOf(slot).map((n) => `Pad ${n}`);
-    const keys = slot === 0 ? 'Keys: WASD + E J K I L N' : 'Keys: arrows + numpad';
-    return [keys, ...pads].join(' · ');
+    const keys = keysSummary(this.app.controls.keyboard.keysOf(slot));
+    return [...(keys ? [`Keys: ${keys}`] : []), ...pads].join(' · ') || 'Connect a gamepad';
   }
 }

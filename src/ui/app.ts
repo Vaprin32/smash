@@ -2,7 +2,7 @@
 // Every screen ticks at the fixed 60 Hz rate and draws once per animation frame.
 
 import type { Sfx } from '../audio/sfx';
-import { BINDINGS } from '../input/bindings';
+import { BINDINGS, type LayoutName } from '../input/bindings';
 import type { Controls } from '../input/controls';
 import { CharSelectScreen } from './charSelect';
 import { ControlsScreen } from './controlsScreen';
@@ -43,28 +43,34 @@ export class App {
   }
 
   toMainMenu(): void {
-    this.go(new MainMenu(this));
+    this.go(new MainMenu(this), 'solo');
   }
 
   toControls(): void {
-    this.go(new ControlsScreen(this));
+    this.go(new ControlsScreen(this), 'solo');
   }
 
   /** `chars` puts the cursors back on the fighters picked last time. */
   toCharSelect(mode: Mode, chars?: readonly number[]): void {
-    this.go(new CharSelectScreen(this, mode, chars));
+    this.go(new CharSelectScreen(this, mode, chars), layoutFor(mode));
   }
 
   startMatch(mode: Mode, chars: readonly number[]): void {
-    this.go(new MatchScreen(this, mode, chars));
+    this.go(new MatchScreen(this, mode, chars), layoutFor(mode));
   }
 
   toResults(result: MatchResult): void {
-    this.go(new ResultsScreen(this, result));
+    this.go(new ResultsScreen(this, result), layoutFor(result.mode));
   }
 
-  private go(screen: Screen): void {
+  private go(screen: Screen, layout: LayoutName): void {
     this.screen = screen;
+    this.controls.setLayout(layout);
     this.controls.allowPadSwap = screen instanceof CharSelectScreen;
   }
+}
+
+/** Local versus splits the keyboard between two players; everything else gives P1 all of it. */
+function layoutFor(mode: Mode): LayoutName {
+  return mode === 'versus' ? 'versus' : 'solo';
 }

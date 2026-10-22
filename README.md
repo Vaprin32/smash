@@ -33,15 +33,18 @@ plus that fighter's hand-written specials. Looks (proportions, colors, accessory
 
 ## Controls
 
-| Action | Player 1 | Player 2 | Gamepad |
-|---|---|---|---|
-| Move | W A S D | arrows | left stick / d-pad |
-| Jump | L or Space | Numpad 3 | X / Y |
-| Attack | J | Numpad 1 | A |
-| Smash (ground only) | K | Numpad 2 | RB |
-| Special | I | Numpad 5 | B |
-| Shield / roll / dodge / grab | E | Numpad 0 | LT / RT |
-| Dash | N | Numpad 4 | LB |
+Menus and Training use the one-player layout. Local Versus splits the keyboard in half
+(no numpad needed); keys are physical positions, so on a Spanish keyboard `;` is Ñ.
+
+| Action | Training (P1) | Versus P1 | Versus P2 | Gamepad |
+|---|---|---|---|---|
+| Move | W A S D | W A S D | I J K L | left stick / d-pad |
+| Jump | L or Space | R | P | X / Y |
+| Attack | J | F | ; | A |
+| Smash (ground only) | K | T | [ | RB |
+| Special | I | G | ' | B |
+| Shield / roll / dodge / grab | E | E | O | LT / RT |
+| Dash | N | B | / | LB |
 
 Attack: jab combo, tilts, dash attack on the ground; aerials in the air. Smash: forward / up / down
 smash (hold to charge). Special + direction: neutral / side / up (recovery) / down special.
@@ -53,6 +56,6 @@ In a match: Esc or the pad's Menu button pauses, F1 toggles the debug overlay, R
 
 Gamepads are assigned in the order they connect (first pad = P1, second = P2); each player's
 keyboard keys keep working too. On character select, a pad's View/Back button moves it to the
-other player. Player 2's keyboard layout needs a numpad; without one, use a gamepad.
+other player.
 
-All bindings (keyboard and gamepad) live in `src/input/bindings.ts`.
+All bindings (both keyboard layouts and the gamepad) live in `src/input/bindings.ts`.

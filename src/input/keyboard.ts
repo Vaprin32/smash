@@ -1,5 +1,5 @@
 import { Btn, type InputBits } from '../sim/input';
-import { BINDINGS, type PlayerKeys } from './bindings';
+import { BINDINGS, type LayoutName, type PlayerKeys } from './bindings';
 
 const BUTTON_FOR: [keyof PlayerKeys, number][] = [
   ['left', Btn.Left],
@@ -23,9 +23,12 @@ export class Keyboard {
   private tapped = new Set<string>();
   private handlers = new Map<string, () => void>();
   private bound = new Set<string>();
+  private layout: readonly PlayerKeys[] = BINDINGS.layouts.solo;
 
   constructor(target: Window) {
-    for (const p of BINDINGS.players) for (const codes of Object.values(p)) for (const c of codes) this.bound.add(c);
+    for (const layout of Object.values(BINDINGS.layouts)) {
+      for (const p of layout) for (const codes of Object.values(p)) for (const c of codes) this.bound.add(c);
+    }
     this.bound.add(BINDINGS.toggleDebug);
 
     target.addEventListener('keydown', (e) => {
@@ -54,9 +57,19 @@ export class Keyboard {
     return this.tapped.has(code);
   }
 
+  /** Which keys each player uses from now on. */
+  setLayout(name: LayoutName): void {
+    this.layout = BINDINGS.layouts[name];
+  }
+
+  /** A player's keys in the current layout. */
+  keysOf(player: number): PlayerKeys | undefined {
+    return this.layout[player];
+  }
+
   /** Bitmask for one player this frame. Call `endFrame` after sampling every player. */
   sample(player: number): InputBits {
-    const keys = BINDINGS.players[player];
+    const keys = this.layout[player];
     if (!keys) return 0;
     let bits = 0;
     for (const [name, bit] of BUTTON_FOR) {

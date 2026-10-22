@@ -18,33 +18,59 @@ export interface PlayerKeys {
 
 export type PadButtons = Record<Exclude<keyof PlayerKeys, 'left' | 'right' | 'up' | 'down'>, number[]>;
 
+/** 'solo': menus and training (player 1 has the whole keyboard). 'versus': local versus. */
+export type LayoutName = 'solo' | 'versus';
+
+const NO_KEYS: PlayerKeys = { left: [], right: [], up: [], down: [], jump: [], attack: [], heavy: [], special: [], dodge: [], dash: [] };
+
 export const BINDINGS = {
-  players: [
-    {
-      left: ['KeyA'],
-      right: ['KeyD'],
-      up: ['KeyW'],
-      down: ['KeyS'],
-      jump: ['KeyL', 'Space'],
-      attack: ['KeyJ'],
-      heavy: ['KeyK'],
-      special: ['KeyI'],
-      dodge: ['KeyE'],
-      dash: ['KeyN'],
-    },
-    {
-      left: ['ArrowLeft'],
-      right: ['ArrowRight'],
-      up: ['ArrowUp'],
-      down: ['ArrowDown'],
-      jump: ['Numpad3'],
-      attack: ['Numpad1'],
-      heavy: ['Numpad2'],
-      special: ['Numpad5'],
-      dodge: ['Numpad0'],
-      dash: ['Numpad4'],
-    },
-  ] satisfies PlayerKeys[],
+  /** One PlayerKeys per player slot, per layout. */
+  layouts: {
+    solo: [
+      {
+        left: ['KeyA'],
+        right: ['KeyD'],
+        up: ['KeyW'],
+        down: ['KeyS'],
+        jump: ['KeyL', 'Space'],
+        attack: ['KeyJ'],
+        heavy: ['KeyK'],
+        special: ['KeyI'],
+        dodge: ['KeyE'],
+        dash: ['KeyN'],
+      },
+      NO_KEYS,
+    ],
+    // The keyboard split in half, no numpad needed. Each player's right hand
+    // covers a mirrored block: index finger attack, middle finger special,
+    // jump and smash above them, dash below.
+    versus: [
+      {
+        left: ['KeyA'],
+        right: ['KeyD'],
+        up: ['KeyW'],
+        down: ['KeyS'],
+        jump: ['KeyR'],
+        attack: ['KeyF'],
+        heavy: ['KeyT'],
+        special: ['KeyG'],
+        dodge: ['KeyE'],
+        dash: ['KeyB'],
+      },
+      {
+        left: ['KeyJ'],
+        right: ['KeyL'],
+        up: ['KeyI'],
+        down: ['KeyK'],
+        jump: ['KeyP'],
+        attack: ['Semicolon'],
+        heavy: ['BracketLeft'],
+        special: ['Quote'],
+        dodge: ['KeyO'],
+        dash: ['Slash'],
+      },
+    ],
+  } satisfies Record<LayoutName, PlayerKeys[]>,
   /**
    * Standard mapping, Xbox names: 0 A, 1 B, 2 X, 3 Y, 4 LB, 5 RB, 6 LT, 7 RT,
    * 8 View/Back, 9 Menu/Start, 12-15 d-pad up/down/left/right. Left stick moves.

@@ -47,7 +47,7 @@ export class MainMenu implements Screen {
       drawFigure(ctx, i, lookOf(i).body, x, floorY, 1.3, x < W / 2 ? 1 : -1, idlePose(this.frame + i * 17), t);
     });
 
-    text(ctx, 'W/S or ↑/↓ to move · J, Space or Enter to choose · gamepads work too', W / 2, 680, {
+    text(ctx, 'W/S to move · J, Space or Enter to choose · gamepads work too', W / 2, 680, {
       size: 15,
       align: 'center',
       color: 'rgba(255,255,255,0.6)',
