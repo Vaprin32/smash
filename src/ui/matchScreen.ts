@@ -1,19 +1,16 @@
 // A local match: countdown, fixed-step simulation, pause menu, and the
 // "GAME!" pause before the results screen. Everything here only reads sim
-// state; the sim only ever sees one input bitmask per player per frame.
+// state; the sim only ever sees one input bitmask per player per frame,
+// and every frame is recorded so the match can be watched again.
 
-import { drawDebugText, drawDebugWorld } from '../render/debug';
-import { Camera } from '../render/camera';
-import { Effects } from '../render/effects';
-import { drawHud } from '../render/hud';
-import { drawWorld } from '../render/renderer';
 import { Btn } from '../sim/input';
 import { MATCH_ON, matchWinner } from '../sim/outcome';
+import { newReplay, recordStep, type Replay } from '../sim/replay';
 import { DEFAULT_STOCKS } from '../sim/rules';
-import { createMatch, type MatchState } from '../sim/state';
-import { step } from '../sim/step';
+import { createMatch, type MatchSetup, type MatchState } from '../sim/state';
 import type { App, Mode, Screen } from './app';
 import { beginLayout, drawMenu, panel, text, type View } from './draw';
+import { MatchView } from './matchView';
 import { MenuList } from './menuModel';
 import type { MatchResult } from './results';
 
@@ -28,8 +25,8 @@ const PAUSE_ITEMS = ['Resume', 'Restart', 'Character select', 'Main menu'];
 
 export class MatchScreen implements Screen {
   private state!: MatchState;
-  private camera!: Camera;
-  private effects!: Effects;
+  private replay?: Replay;
+  private view!: MatchView;
   private countdown = 0;
   private sinceStart = 0;
   private endTicks = -1;
@@ -38,10 +35,6 @@ export class MatchScreen implements Screen {
   /** Buttons held when play (re)starts are ignored until released. */
   private blocked = [0, 0];
   private damageDealt = [0, 0];
-  private renderFrames = 0;
-  private simFrames = 0;
-  private fps = { renderFps: 0, simFps: 0 };
-  private fpsWindowStart = performance.now();
 
   constructor(
     private app: App,
@@ -52,15 +45,21 @@ export class MatchScreen implements Screen {
   }
 
   private restart(): void {
-    this.state = createMatch({ seed: (Math.random() * 0x100000000) >>> 0, stageId: 0, chars: this.chars, stocks: DEFAULT_STOCKS });
-    this.camera = new Camera();
-    // Effects dedupe by frame number, which starts over with the new match.
-    this.effects = new Effects(this.app.sfx);
+    this.keepReplay();
+    const setup: MatchSetup = { seed: (Math.random() * 0x100000000) >>> 0, stageId: 0, chars: this.chars, stocks: DEFAULT_STOCKS };
+    this.state = createMatch(setup);
+    this.replay = newReplay(setup);
+    this.view = new MatchView(this.app);
     this.countdown = COUNTDOWN;
     this.sinceStart = 0;
     this.endTicks = -1;
     this.damageDealt = [0, 0];
     this.blockHeld();
+  }
+
+  /** Make this match the one "Watch replay" shows, unless it never got past the countdown. */
+  private keepReplay(): void {
+    if (this.replay && this.replay.inputs.length > 0) this.app.lastMatch = { mode: this.mode, replay: this.replay };
   }
 
   /** Ignore the action buttons that are held right now until they're let go. */
@@ -107,10 +106,9 @@ export class MatchScreen implements Screen {
 
     const inputs = [this.gated(0), this.mode === 'training' ? 0 : this.gated(1)];
     const prev = this.state;
-    this.state = step(prev, inputs);
-    this.effects.onStep(prev, this.state);
+    this.state = recordStep(this.replay!, prev, inputs);
+    this.view.onStep(prev, this.state);
     this.sinceStart++;
-    this.simFrames++;
     // 1v1: damage a fighter takes was dealt by the other one.
     this.state.fighters.forEach((f, i) => {
       const taken = f.damage - prev.fighters[i]!.damage;
@@ -140,9 +138,11 @@ export class MatchScreen implements Screen {
         this.restart();
         break;
       case 2:
+        this.keepReplay();
         this.app.toCharSelect(this.mode, this.chars);
         break;
       default:
+        this.keepReplay();
         this.app.toMainMenu();
     }
   }
@@ -154,6 +154,7 @@ export class MatchScreen implements Screen {
   }
 
   private finish(): void {
+    this.keepReplay();
     const result: MatchResult = {
       mode: this.mode,
       chars: [...this.chars],
@@ -167,35 +168,12 @@ export class MatchScreen implements Screen {
   }
 
   draw(ctx: CanvasRenderingContext2D, view: View, dtMs: number): void {
-    const { w, h, dpr } = view;
-    this.effects.update(dtMs);
-    this.camera.shakeX = this.effects.shakeX * dpr;
-    this.camera.shakeY = this.effects.shakeY * dpr;
-    this.camera.update(this.state, w, h);
-    drawWorld(ctx, this.state, this.camera, w, h);
-    this.effects.draw(ctx);
-    const debug = this.app.debug;
-    if (debug) drawDebugWorld(ctx, this.state, this.camera, w, h);
     const training = this.mode === 'training';
-    drawHud(
-      ctx,
-      this.state,
-      w,
-      h,
-      dpr,
-      training ? ['', 'CPU'] : [],
-      training ? 'Training · R reset · Esc pause · F1 debug' : 'Esc / Menu: pause · F1 debug',
-    );
-    if (debug) drawDebugText(ctx, this.state, this.fps, dpr);
+    this.view.draw(ctx, view, dtMs, this.state, {
+      labels: training ? ['', 'CPU'] : [],
+      hint: training ? 'Training · R reset · Esc pause · F1 debug' : 'Esc / Menu: pause · F1 debug',
+    });
     this.drawOverlay(ctx, view);
-
-    this.renderFrames++;
-    const now = performance.now();
-    if (now - this.fpsWindowStart >= 1000) {
-      this.fps = { renderFps: this.renderFrames, simFps: this.simFrames };
-      this.renderFrames = this.simFrames = 0;
-      this.fpsWindowStart = now;
-    }
   }
 
   private drawOverlay(ctx: CanvasRenderingContext2D, view: View): void {

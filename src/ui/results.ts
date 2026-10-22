@@ -18,7 +18,8 @@ export interface MatchResult {
   seconds: number;
 }
 
-const ITEMS = ['Rematch', 'Character select', 'Main menu'];
+const ITEMS = ['Rematch', 'Watch replay', 'Character select', 'Main menu'];
+const WATCH_REPLAY = 1;
 /** Ignore input briefly so buttons mashed at the end of the match don't pick an option. */
 const INPUT_DELAY = 45;
 const W = 1100;
@@ -28,10 +29,17 @@ export class ResultsScreen implements Screen {
   private list = new MenuList(ITEMS.length);
   private frame = 0;
 
+  /** `fromReplay`: back from watching the replay, so no input delay and the cursor stays put. */
   constructor(
     private app: App,
     readonly result: MatchResult,
-  ) {}
+    fromReplay = false,
+  ) {
+    if (fromReplay) {
+      this.frame = INPUT_DELAY;
+      this.list.index = WATCH_REPLAY;
+    }
+  }
 
   private label(slot: number): string {
     return this.result.mode === 'training' && slot === 1 ? 'CPU' : `P${slot + 1}`;
@@ -51,7 +59,8 @@ export class ResultsScreen implements Screen {
     if (event !== 'choose') return;
     this.app.sfx.select();
     if (this.list.index === 0) this.app.startMatch(r.mode, r.chars);
-    else if (this.list.index === 1) this.app.toCharSelect(r.mode, r.chars);
+    else if (this.list.index === WATCH_REPLAY) this.app.watchReplay(() => this.app.toResults(r, true));
+    else if (this.list.index === 2) this.app.toCharSelect(r.mode, r.chars);
     else this.app.toMainMenu();
   }
 
@@ -88,6 +97,6 @@ export class ResultsScreen implements Screen {
       if (won) text(ctx, '★ WINNER', tx, 400, { size: 20, bold: true, color: '#ffd166' });
     });
 
-    if (this.frame >= INPUT_DELAY) drawMenu(ctx, ITEMS, this.list.index, W / 2, 530, 320, 54);
+    if (this.frame >= INPUT_DELAY) drawMenu(ctx, ITEMS, this.list.index, W / 2, 516, 320, 48);
   }
 }

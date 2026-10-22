@@ -9,6 +9,8 @@ import type { Camera } from './camera';
 export interface DebugInfo {
   renderFps: number;
   simFps: number;
+  /** Extra lines from the screen (e.g. replay progress). */
+  lines?: readonly string[];
 }
 
 /** Collision geometry, hurtboxes (yellow; cyan while intangible) and active hitboxes (red). */
@@ -63,6 +65,7 @@ export function drawDebugText(ctx: CanvasRenderingContext2D, state: MatchState, 
   const lines = [
     `frame ${state.frame}   render ${info.renderFps} fps   sim ${info.simFps} fps`,
     `hash 0x${hashState(state).toString(16).padStart(8, '0')}   rng 0x${(state.rng >>> 0).toString(16)}`,
+    ...(info.lines ?? []),
   ];
   state.fighters.forEach((f, i) => {
     const def = FIGHTERS[f.charId]!;

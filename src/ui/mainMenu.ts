@@ -5,15 +5,24 @@ import type { App, Screen } from './app';
 import { beginLayout, drawBackdrop, drawFigure, drawMenu, text, type View } from './draw';
 import { MenuList } from './menuModel';
 
-const ITEMS = ['Local Versus', 'Training', 'Controls'];
 const W = 1100;
 const H = 720;
 
 export class MainMenu implements Screen {
-  private list = new MenuList(ITEMS.length);
+  /** "Watch replay" is there once a match has been played. */
+  private items: string[];
+  private list: MenuList;
   private frame = 0;
 
-  constructor(private app: App) {}
+  /** `select` puts the cursor on that item. */
+  constructor(
+    private app: App,
+    select?: string,
+  ) {
+    this.items = ['Local Versus', 'Training', ...(app.lastMatch ? ['Watch replay'] : []), 'Controls'];
+    this.list = new MenuList(this.items.length);
+    this.list.index = Math.max(0, this.items.indexOf(select ?? ''));
+  }
 
   tick(): void {
     this.frame++;
@@ -22,9 +31,19 @@ export class MainMenu implements Screen {
     if (event === 'move') this.app.sfx.move();
     if (event !== 'choose') return;
     this.app.sfx.select();
-    if (this.list.index === 0) this.app.toCharSelect('versus');
-    else if (this.list.index === 1) this.app.toCharSelect('training');
-    else this.app.toControls();
+    switch (this.items[this.list.index]) {
+      case 'Local Versus':
+        this.app.toCharSelect('versus');
+        break;
+      case 'Training':
+        this.app.toCharSelect('training');
+        break;
+      case 'Watch replay':
+        this.app.watchReplay(() => this.app.toMainMenu('Watch replay'));
+        break;
+      default:
+        this.app.toControls();
+    }
   }
 
   draw(ctx: CanvasRenderingContext2D, view: View): void {
@@ -34,7 +53,7 @@ export class MainMenu implements Screen {
 
     text(ctx, 'SMASH PROTOTYPE', W / 2, 130, { size: 64, bold: true, align: 'center', color: '#ffd166', outline: true });
     text(ctx, 'Eight fighters · local versus', W / 2, 168, { size: 18, align: 'center', color: '#c9c7e8' });
-    drawMenu(ctx, ITEMS, this.list.index, W / 2, 210, 340);
+    drawMenu(ctx, this.items, this.list.index, W / 2, 210, 340);
 
     // The roster, lined up on a floor, facing the middle.
     const floorY = 610;

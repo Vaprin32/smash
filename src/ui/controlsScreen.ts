@@ -44,7 +44,7 @@ export class ControlsScreen implements Screen {
     const presses = [c.menu(0), c.menu(1)];
     if (c.backKey || c.confirmKey || c.startButton || presses.some((p) => p.back || p.confirm)) {
       this.app.sfx.back();
-      this.app.toMainMenu();
+      this.app.toMainMenu('Controls');
     }
   }
 

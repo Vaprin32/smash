@@ -1,18 +1,26 @@
-// Screen manager: main menu -> character select -> match -> results.
+// Screen manager: main menu -> character select -> match -> results (-> replay).
 // Every screen ticks at the fixed 60 Hz rate and draws once per animation frame.
 
 import type { Sfx } from '../audio/sfx';
 import { BINDINGS, type LayoutName } from '../input/bindings';
 import type { Controls } from '../input/controls';
+import type { Replay } from '../sim/replay';
 import { CharSelectScreen } from './charSelect';
 import { ControlsScreen } from './controlsScreen';
 import type { View } from './draw';
 import { MainMenu } from './mainMenu';
 import { MatchScreen } from './matchScreen';
+import { ReplayScreen } from './replayScreen';
 import { ResultsScreen, type MatchResult } from './results';
 
 /** Local versus (two players) or training (player 1 against an idle CPU dummy). */
 export type Mode = 'versus' | 'training';
+
+/** The most recent match played, for "Watch replay". */
+export interface LastMatch {
+  mode: Mode;
+  replay: Replay;
+}
 
 export interface Screen {
   /** One fixed 60 Hz tick. Input has already been polled. */
@@ -25,6 +33,7 @@ export class App {
   private screen: Screen;
   /** F1 debug overlay (matches only). */
   debug = false;
+  lastMatch: LastMatch | null = null;
 
   constructor(
     readonly controls: Controls,
@@ -42,8 +51,9 @@ export class App {
     this.screen.draw(ctx, view, dtMs);
   }
 
-  toMainMenu(): void {
-    this.go(new MainMenu(this), 'solo');
+  /** `select` puts the cursor on that menu item. */
+  toMainMenu(select?: string): void {
+    this.go(new MainMenu(this, select), 'solo');
   }
 
   toControls(): void {
@@ -59,8 +69,14 @@ export class App {
     this.go(new MatchScreen(this, mode, chars), layoutFor(mode));
   }
 
-  toResults(result: MatchResult): void {
-    this.go(new ResultsScreen(this, result), layoutFor(result.mode));
+  /** `fromReplay`: coming back from watching this match's replay. */
+  toResults(result: MatchResult, fromReplay = false): void {
+    this.go(new ResultsScreen(this, result, fromReplay), layoutFor(result.mode));
+  }
+
+  /** Watch `lastMatch`; `back` is where leaving the replay goes. */
+  watchReplay(back: () => void): void {
+    if (this.lastMatch) this.go(new ReplayScreen(this, this.lastMatch, back), 'solo');
   }
 
   private go(screen: Screen, layout: LayoutName): void {

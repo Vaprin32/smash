@@ -11,7 +11,7 @@ npm run build:html # dist/smash.html, a single file that runs from disk
 ```
 
 Main menu → **Local Versus** (two players) or **Training** (you against an idle CPU dummy) →
-character select → 3-stock match → results (Rematch / Character select / Main menu).
+character select → 3-stock match → results (Rematch / Watch replay / Character select / Main menu).
 
 ## Fighters
 
@@ -60,3 +60,27 @@ keyboard keys keep working too. On character select, a pad's View/Back button mo
 other player.
 
 All bindings (both keyboard layouts and the gamepad) live in `src/input/bindings.ts`.
+
+## Replays and determinism
+
+Every match is recorded as its setup (seed, stage, fighters, stocks) plus each frame's inputs
+(`src/sim/replay.ts`). The simulation is deterministic, so that is enough to play the match back
+exactly. **Watch replay** (on the results screen, and in the main menu once a match has been
+played) re-simulates the last match:
+
+| Key | In a replay |
+|---|---|
+| J / Space / Enter (pad A or Menu) | pause / resume; at the end, watch again |
+| A / D (d-pad) | slower / faster (¼× to 4×); while paused, one frame back / forward |
+| R | restart |
+| Esc / I (pad B) | back |
+
+A replay also stores a state hash every 60 frames. Playback checks against them (F1 shows
+"checksums ok") and shows "REPLAY DESYNC at frame N" if one ever differs.
+
+`tests/determinism.test.ts` plays 12,000-frame matches of seeded random input (`tests/masher.ts`)
+covering all eight fighters plus a mirror match, and checks every frame: the replay plays back
+to the same `hashState` (also after a JSON round-trip), two runs stepped side by side stay
+identical, saving at frame N and re-simulating from a clone or from serialized bytes reproduces
+the original (including after a mispredicted branch, as rollback will do), `step()` never
+mutates its input, and the state only ever holds int32 integers.
