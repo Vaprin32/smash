@@ -31,7 +31,7 @@ The look is medieval: a stone rampart at sunset under a far castle, oak and gold
 
 Each fighter's stats live in `src/sim/fighters/<name>.ts`. Moves are in `src/sim/moves/<name>.ts`:
 a tuning line (frames / size / reach / damage / knockback, relative to Wisp's moveset)
-plus that fighter's hand-written specials. Looks (proportions, colors, accessory) are in
+plus that fighter's hand-written specials. Looks (proportions, colors, costume) are in
 `src/render/looks.ts`.
 
 ## Controls

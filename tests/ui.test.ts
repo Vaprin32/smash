@@ -137,8 +137,8 @@ describe('looks', () => {
     });
   });
 
-  it('every fighter has its own accessory and colors', () => {
-    expect(new Set(LOOKS.map((l) => l.accessory)).size).toBe(LOOKS.length);
+  it('every fighter has its own costume and colors', () => {
+    expect(new Set(LOOKS.map((l) => l.costume)).size).toBe(LOOKS.length);
     expect(new Set(LOOKS.map((l) => l.body)).size).toBe(LOOKS.length);
     for (const l of LOOKS) expect(l.alt).not.toBe(l.body);
   });

@@ -20,65 +20,65 @@ export interface FighterLook extends Look {
  */
 export const LOOKS: readonly FighterLook[] = [
   {
-    // Wisp, the bard: slim and long-limbed, with a trailing scarf.
+    // Wisp, the bard: slim and long-limbed; floppy cap, slashed doublet, lute.
     thigh: 14, shin: 14, torso: 19, upperArm: 12, forearm: 12, headR: 7.5, neck: 2.5, limbW: 6, torsoW: 12,
-    skin: '#f2d2b6', hair: '#f4f1ea', accent: '#e8c547', accessory: 'scarf',
+    skin: '#f2d2b6', hair: '#c98a4b', accent: '#c0473a', costume: 'bard', trim: '#f4f1ea',
     body: '#4f9c8f', alt: '#c9874a', projectile: 'gust',
     title: 'The Wandering Bard',
     blurb: 'Fast, light and floaty; weak hits, great recovery.',
   },
   {
-    // Brick, the knight: broad, in a steel great helm.
+    // Brick, the knight: broad; great helm with a plume, plate, tabard, kite shield.
     thigh: 15, shin: 14, torso: 22, upperArm: 14, forearm: 13, headR: 8.5, neck: 2, limbW: 10, torsoW: 22,
-    skin: '#c98e64', hair: '#3a2a20', accent: '#b9c0c7', accessory: 'helmet',
+    skin: '#c98e64', hair: '#3a2a20', accent: '#e8c547', costume: 'knight', trim: '#b9c0c7',
     body: '#8e2a26', alt: '#2f4f86',
     title: 'The Iron Knight',
     blurb: 'Heavy, slow and hard-hitting; hard to launch.',
   },
   {
-    // Pip, the squire: tiny, big-headed, with round ears.
+    // Pip, the squire: tiny and big-headed; kettle hat, leather jerkin, sling.
     thigh: 8, shin: 8, torso: 12, upperArm: 7, forearm: 7, headR: 7.5, neck: 1, limbW: 5, torsoW: 11,
-    skin: '#f6dcc0', hair: '#a0643a', accent: '#ffd84a', accessory: 'ears',
+    skin: '#f6dcc0', hair: '#a0643a', accent: '#ffd84a', costume: 'squire', trim: '#9aa1a8',
     body: '#6b8f3a', alt: '#b0643a', projectile: 'pebble',
     title: 'The Hedge Squire',
     blurb: 'Tiny featherweight with a sling; three air jumps.',
   },
   {
-    // Kestrel, the falconer: lean, with a swept-back feather crest.
+    // Kestrel, the falconer: lean; long-tailed hood, quiver, longbow.
     thigh: 14, shin: 15, torso: 18, upperArm: 12, forearm: 12, headR: 7, neck: 2.5, limbW: 6, torsoW: 12,
-    skin: '#e6b98f', hair: '#2b2f4a', accent: '#c8482e', accessory: 'crest',
+    skin: '#e6b98f', hair: '#2b2f4a', accent: '#c8482e', costume: 'falconer', trim: '#4e6b3a',
     body: '#33508f', alt: '#a07a22', projectile: 'dart',
     title: 'The Falconer',
     blurb: 'Fast-falling rushdown; quick arrows, hawk dives.',
   },
   {
-    // Lumen, the cleric: tall and slender, with a floating halo.
+    // Lumen, the cleric: tall and slender; mitre, robe, stole, holy staff.
     thigh: 16, shin: 17, torso: 20, upperArm: 13, forearm: 13, headR: 7, neck: 3, limbW: 5, torsoW: 11,
-    skin: '#f3e3d3', hair: '#fff2b0', accent: '#ffe27a', accessory: 'halo',
+    skin: '#f3e3d3', hair: '#fff2b0', accent: '#ffe27a', costume: 'cleric', trim: '#f6f1e2',
     body: '#d9d0bb', alt: '#7a5aa8', projectile: 'orb',
     title: 'The Cleric',
     blurb: 'Floaty zoner; keeps you out with slow, holy light.',
   },
   {
-    // Basalt, the golem: a stone giant with boulder shoulders.
+    // Basalt, the golem: a stone giant; boulder shoulders, glowing runes, moss.
     thigh: 19, shin: 18, torso: 28, upperArm: 18, forearm: 17, headR: 9.5, neck: 2, limbW: 13, torsoW: 30,
-    skin: '#9a9fa8', hair: '#5b5f69', accent: '#ff7a2f', accessory: 'boulders',
+    skin: '#9a9fa8', hair: '#5b5f69', accent: '#ff7a2f', costume: 'golem', trim: '#6f9a4f',
     body: '#7a6250', alt: '#3d6f68',
     title: 'The Stone Golem',
     blurb: 'Giant super-heavyweight; slowest and strongest.',
   },
   {
-    // Sable, the duelist: tall, with a long sword.
+    // Sable, the duelist: tall; plumed wide-brim hat, sash, rapier.
     thigh: 16, shin: 16, torso: 21, upperArm: 14, forearm: 14, headR: 7.5, neck: 2.5, limbW: 6, torsoW: 12,
-    skin: '#d9a982', hair: '#1c1c24', accent: '#d5e1ec', accessory: 'blade',
+    skin: '#d9a982', hair: '#1c1c24', accent: '#d5e1ec', costume: 'duelist', trim: '#2a1a24',
     body: '#6a2342', alt: '#2e6a48', projectile: 'crescent',
     title: 'The Duelist',
     blurb: 'Long reach; the tip of the blade hits hardest.',
   },
   {
-    // Rook, the captain: sturdy, in a cape.
+    // Rook, the captain: sturdy; nasal helm, beard, mail and tabard, cape.
     thigh: 14, shin: 14, torso: 20, upperArm: 13, forearm: 13, headR: 8, neck: 2.5, limbW: 8, torsoW: 16,
-    skin: '#e0b48c', hair: '#7a4a2a', accent: '#c9a03a', accessory: 'cape',
+    skin: '#e0b48c', hair: '#7a4a2a', accent: '#c9a03a', costume: 'captain', trim: '#9aa1a8',
     body: '#3b6e5c', alt: '#8a3b2a',
     title: 'The Captain of the Guard',
     blurb: 'All-rounder, with a counter.',

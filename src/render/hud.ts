@@ -2,6 +2,7 @@ import { Action } from '../sim/actions';
 import { FIGHTERS } from '../sim/fighters';
 import type { MatchState } from '../sim/state';
 import { fighterColor, lookOf, slotColor } from './renderer';
+import { capColor } from './skeleton';
 import { heraldicShield, plaque, SERIF, THEME } from './theme';
 
 /** Parchment at 0%, through amber and orange, to blood red at 150%+. */
@@ -56,7 +57,7 @@ export function drawHud(
     ctx.arc(px, py, 12, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
-    ctx.fillStyle = look.accessory === 'helmet' ? look.accent : look.hair;
+    ctx.fillStyle = capColor(look);
     ctx.beginPath();
     ctx.arc(px, py, 12, Math.PI * 0.95, Math.PI * 2.05);
     ctx.closePath();
