@@ -1,5 +1,6 @@
 node_modules/
-dist/
+dist/*
+!dist/smash.html
 *.log
 .DS_Store
 .claude/settings.local.json
