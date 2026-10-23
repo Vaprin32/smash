@@ -7,6 +7,7 @@ import { Camera } from '../render/camera';
 import { drawDebugText, drawDebugWorld } from '../render/debug';
 import { Effects } from '../render/effects';
 import { drawHud } from '../render/hud';
+import { drawForeground } from '../render/scenery';
 import { drawWorld } from '../render/renderer';
 import type { MatchState } from '../sim/state';
 import type { App } from './app';
@@ -55,6 +56,7 @@ export class MatchView {
     this.camera.update(state, w, h);
     drawWorld(ctx, state, this.camera, w, h);
     this.effects.draw(ctx);
+    drawForeground(ctx, this.camera, w, h, performance.now());
     const debug = this.app.debug;
     if (debug) drawDebugWorld(ctx, state, this.camera, w, h);
     drawHud(ctx, state, w, h, dpr, hud.labels, hud.hint);

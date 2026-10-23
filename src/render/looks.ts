@@ -63,7 +63,7 @@ export const LOOKS: readonly FighterLook[] = [
     // Basalt, the golem: a stone giant; boulder shoulders, glowing runes, moss.
     thigh: 19, shin: 18, torso: 28, upperArm: 18, forearm: 17, headR: 9.5, neck: 2, limbW: 13, torsoW: 30,
     skin: '#9a9fa8', hair: '#5b5f69', accent: '#ff7a2f', costume: 'golem', trim: '#6f9a4f',
-    body: '#7a6250', alt: '#3d6f68',
+    body: '#8b8478', alt: '#6c7a80',
     title: 'The Stone Golem',
     blurb: 'Giant super-heavyweight; slowest and strongest.',
   },

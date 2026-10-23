@@ -3,6 +3,7 @@
 
 import { lookOf } from '../render/renderer';
 import { drawRig, solveRig, type Pose } from '../render/skeleton';
+import { drawBackground } from '../render/scenery';
 import { banner, plaque, roundRect, SERIF, THEME } from '../render/theme';
 
 export { roundRect };
@@ -70,54 +71,18 @@ export function panel(ctx: CanvasRenderingContext2D, x: number, y: number, w: nu
   ctx.stroke();
 }
 
-const STARS = Array.from({ length: 60 }, (_, i) => ({ x: (i * 0.6180339) % 1, y: ((i * 0.41421) % 1) * 0.55, r: 0.6 + (i % 3) * 0.5 }));
-/** Castle skyline: [x0, x1, top] in fractions of the screen; towers are the tall narrow ones. */
-const SKYLINE: [number, number, number][] = [
-  [0, 0.12, 0.72], [0.08, 0.13, 0.6], [0.13, 0.3, 0.76], [0.26, 0.31, 0.62], [0.3, 0.7, 0.8],
-  [0.42, 0.47, 0.55], [0.53, 0.58, 0.55], [0.47, 0.53, 0.66], [0.7, 0.87, 0.76], [0.69, 0.74, 0.62], [0.87, 1, 0.72], [0.86, 0.91, 0.6],
-];
 const BANNER_COLORS = ['#8e2a26', '#24477f', '#2f6b3a', '#7a5a14'];
 
-/** Night sky over a castle skyline, with banners hanging from the top. Call before beginLayout. */
+/** The game's scenery, slowly panning, with banners hanging from the top. Call before beginLayout. */
 export function drawBackdrop(ctx: CanvasRenderingContext2D, view: View, timeMs: number): void {
   const { w, h, dpr } = view;
+  drawBackground(ctx, { x: Math.sin(timeMs * 0.00004) * 400, y: -40, zoom: h / 820 }, w, h, timeMs, [0.2, 0.36]);
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  const sky = ctx.createLinearGradient(0, 0, 0, h);
-  sky.addColorStop(0, '#0e1028');
-  sky.addColorStop(0.65, '#3a2440');
-  sky.addColorStop(1, '#7a4a2c');
-  ctx.fillStyle = sky;
+  const shade = ctx.createLinearGradient(0, 0, 0, h);
+  shade.addColorStop(0, 'rgba(8,6,16,0.15)');
+  shade.addColorStop(1, 'rgba(8,6,16,0.55)');
+  ctx.fillStyle = shade;
   ctx.fillRect(0, 0, w, h);
-
-  ctx.fillStyle = 'rgba(255,240,210,0.7)';
-  for (const s of STARS) {
-    ctx.globalAlpha = 0.4 + 0.4 * Math.sin(timeMs * 0.002 + s.x * 40);
-    ctx.beginPath();
-    ctx.arc(s.x * w, s.y * h, s.r * dpr, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.globalAlpha = 1;
-  ctx.fillStyle = '#f3e6c4';
-  ctx.beginPath();
-  ctx.arc(w * 0.2, h * 0.36, 34 * dpr, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Castle silhouette with battlements and a few lit windows.
-  ctx.fillStyle = '#140d14';
-  const merlon = 10 * dpr;
-  for (const [x0, x1, top] of SKYLINE) {
-    const left = x0 * w, right = x1 * w, y = top * h;
-    ctx.fillRect(left, y, right - left, h - y);
-    for (let x = left; x < right - merlon / 2; x += merlon * 2) ctx.fillRect(x, y - merlon, Math.min(merlon, right - x), merlon);
-  }
-  ctx.fillStyle = 'rgba(255,190,90,0.75)';
-  for (const [x0, x1, top] of SKYLINE) {
-    if (x1 - x0 > 0.07) continue;
-    const cx = ((x0 + x1) / 2) * w, y = top * h + 30 * dpr;
-    ctx.fillRect(cx - 3 * dpr, y, 6 * dpr, 12 * dpr);
-  }
-
-  // Banners hanging from the top corners.
   const bw = 46 * dpr, bh = 150 * dpr;
   [0.04, 0.12, w > 900 * dpr ? 0.84 : -1, 0.92].forEach((fx, i) => {
     if (fx < 0) return;

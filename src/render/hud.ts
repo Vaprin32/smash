@@ -2,8 +2,8 @@ import { Action } from '../sim/actions';
 import { FIGHTERS } from '../sim/fighters';
 import type { MatchState } from '../sim/state';
 import { fighterColor, lookOf, slotColor } from './renderer';
-import { capColor } from './skeleton';
-import { heraldicShield, plaque, SERIF, THEME } from './theme';
+import { drawPortrait } from './skeleton';
+import { heraldicShield, plaque, SERIF, shieldPath, THEME } from './theme';
 
 /** Parchment at 0%, through amber and orange, to blood red at 150%+. */
 function damageColor(damage: number): string {
@@ -45,24 +45,15 @@ export function drawHud(
     ctx.globalAlpha = out ? 0.45 : 1;
     plaque(ctx, x, y, PANEL_W, PANEL_H, slotColor(i), 0.9);
 
-    // Portrait: the fighter's head on a shield in their colors.
+    // Portrait: the fighter's head and shoulders on a shield in their colors.
     const look = lookOf(f.charId);
     const sw = 50, sx = x + 14, sy = y + 12;
     heraldicShield(ctx, sx, sy, sw, fighterColor(chars, i));
-    const px = sx + sw / 2, py = sy + 27;
-    ctx.fillStyle = look.skin;
-    ctx.strokeStyle = THEME.outline;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(px, py, 12, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-    ctx.fillStyle = capColor(look);
-    ctx.beginPath();
-    ctx.arc(px, py, 12, Math.PI * 0.95, Math.PI * 2.05);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
+    ctx.save();
+    shieldPath(ctx, sx, sy, sw);
+    ctx.clip();
+    drawPortrait(ctx, look, fighterColor(chars, i), sx + sw / 2, sy + sw * 0.52, sw * 0.95);
+    ctx.restore();
 
     const tag = `P${i + 1}${labels[i] ? ` ${labels[i]}` : ''}`;
     ctx.textAlign = 'left';
