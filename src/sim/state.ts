@@ -230,7 +230,11 @@ export function deserializeState(bytes: Uint8Array): MatchState {
 
 /** FNV-1a (32-bit) over the serialized bytes. */
 export function hashState(s: MatchState): number {
-  const bytes = serializeState(s);
+  return hashBytes(serializeState(s));
+}
+
+/** FNV-1a (32-bit), for when the serialized bytes are already at hand. */
+export function hashBytes(bytes: Uint8Array): number {
   let h = 0x811c9dc5;
   for (let i = 0; i < bytes.length; i++) {
     h ^= bytes[i]!;

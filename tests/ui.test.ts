@@ -63,6 +63,16 @@ describe('character select (versus)', () => {
     m.update(both({ confirm: true }, { confirm: true }), false, false);
     expect(m.ready).toBe(true);
   });
+
+  it('the netcode test picks like versus: each player drives and undoes their own cursor', () => {
+    const m = new CharSelectModel('netTest', 8, [0, 1]);
+    m.update(both({ right: true }, { down: true }), false, false);
+    expect(m.cursors.map((c) => c.index)).toEqual([1, 5]);
+    m.update(both({ confirm: true }, { confirm: true }), false, false);
+    expect(m.ready).toBe(true);
+    expect(m.update(both({}, { back: true }), false, false)).toBe('unlock');
+    expect(m.cursors.map((c) => c.locked)).toEqual([true, false]);
+  });
 });
 
 describe('character select (training)', () => {

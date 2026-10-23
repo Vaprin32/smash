@@ -10,7 +10,8 @@ npm run typecheck  # tsc --noEmit
 npm run build:html # dist/smash.html, a single file that runs from disk
 ```
 
-Main menu → **Local Versus** (two players) or **Training** (you against an idle CPU dummy) →
+Main menu → **Local Versus** (two players), **Training** (you against an idle CPU dummy) or
+**Netcode test** (two players, each on their own simulated machine; see below) →
 character select → 3-stock match → results (Rematch / Watch replay / Character select / Main menu).
 
 ## Fighters
@@ -84,3 +85,51 @@ to the same `hashState` (also after a JSON round-trip), two runs stepped side by
 identical, saving at frame N and re-simulating from a clone or from serialized bytes reproduces
 the original (including after a mispredicted branch, as rollback will do), `step()` never
 mutates its input, and the state only ever holds int32 integers.
+
+## Rollback netcode and the netcode test
+
+Online play uses our own small rollback session (`src/net/session.ts`, GGPO-style). Each tick a
+peer schedules its local input `inputDelay` frames ahead (2 by default, 0–4), simulates the next
+frame at once while predicting that the other player still holds their last known input, and
+sends every input the other side hasn't acknowledged yet (so a lost packet doesn't matter). When a
+real input arrives that differs from the prediction, it rewinds to that frame (the last 8 states
+are kept) and re-simulates to the present. It never runs more than 8 frames past the last remote
+input it has; past that it waits. Time sync skips a frame now and then while one peer is
+consistently more than a frame ahead. Every 60 frames both peers compare `hashState` of a
+confirmed frame (one simulated with both players' real inputs); a mismatch shows
+**DESYNC at frame N** and logs both states and the fields that differ to the console.
+Confirmed frames also go into a normal replay, so a networked match can be watched again.
+
+| File | Job |
+|---|---|
+| `src/net/session.ts` | input delay, prediction, rollback, waiting, replay recording |
+| `src/net/sync.ts` | frame advantage and time sync |
+| `src/net/desync.ts` | checksum comparison and state dumps |
+| `src/net/protocol.ts` | binary packet format |
+| `src/net/transports/` | `Transport` interface, `LoopbackTransport` (tests), `FakeNetwork` (latency, jitter, loss) |
+
+**Netcode test** (main menu) runs one match as two sessions side by side: the left half is P1's
+machine, the right half P2's, linked by a fake network. P1's versus keys (and pad 1) play on the
+left, P2's (and pad 2) on the right. The bar on top sets:
+
+- **Latency**: one-way delay per packet, 0–200 ms (the ping shown is about twice this)
+- **Jitter**: up to this much extra random delay per packet, so packets also arrive out of order
+- **Loss**: share of packets dropped, 0–20%
+- **Input delay**: frames between pressing a button and it taking effect, on both machines
+
+It starts at 100 ms, 10 ms jitter and 5% loss. **Hitch P2** freezes P2's machine for half a second
+(P1's waits, then time sync evens them out), **Force desync** nudges P2's simulation so the next
+checksum catches it, and **Restart** starts over. Each half shows its machine's net stats in the
+top-right corner (inside the F1 panel while that's open): ping, rollback frames per second and
+depth, local / remote frame advantage, waits (ticks spent waiting for the other machine), skips
+(frames skipped by time sync) and checksums matched.
+
+How far it stretches (8 frames of rollback, 2 frames of input delay): up to about 150 ms one way
+(300 ms ping) play stays at full speed; beyond that both machines start waiting for each other and
+the game slows down. Raising the input delay buys a little more.
+
+`tests/net.test.ts` runs both peers on a virtual clock and checks that they confirm exactly what
+an offline run of the same inputs produces: over a perfect link; at 100 ms / 10 ms jitter / 5% loss
+for 7,200 frames (rollbacks within 8 frames, no waiting); with heavy jitter and duplicated packets;
+while the input delay changes; at the exact frame a late input rewinds to; through a stall and time
+sync; on disconnect; and that desyncs are detected.

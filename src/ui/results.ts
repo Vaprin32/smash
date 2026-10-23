@@ -2,7 +2,9 @@ import { defeatPose, idlePose, victoryPose } from '../render/animations';
 import { fighterColor, slotColor } from '../render/renderer';
 import { tint } from '../render/skeleton';
 import { FIGHTERS } from '../sim/fighters';
-import { DRAW } from '../sim/outcome';
+import { DRAW, matchWinner } from '../sim/outcome';
+import { DEFAULT_STOCKS } from '../sim/rules';
+import type { MatchState } from '../sim/state';
 import type { App, Mode, Screen } from './app';
 import { beginLayout, drawBackdrop, drawFigure, drawMenu, panel, text, type View } from './draw';
 import { MenuList } from './menuModel';
@@ -16,6 +18,27 @@ export interface MatchResult {
   falls: number[];
   damageDealt: number[];
   seconds: number;
+}
+
+/** The result of a match that ended in `final`. */
+export function matchResult(mode: Mode, chars: readonly number[], final: MatchState, damageDealt: readonly number[]): MatchResult {
+  return {
+    mode,
+    chars: [...chars],
+    winner: matchWinner(final),
+    stocksLeft: final.fighters.map((f) => f.stocks),
+    falls: final.fighters.map((f) => DEFAULT_STOCKS - f.stocks),
+    damageDealt: [...damageDealt],
+    seconds: Math.floor(final.frame / 60),
+  };
+}
+
+/** Add the damage each fighter took from `prev` to `next` to the other one's tally (1v1). */
+export function tallyDamage(dealt: number[], prev: MatchState, next: MatchState): void {
+  next.fighters.forEach((f, i) => {
+    const taken = f.damage - prev.fighters[i]!.damage;
+    if (taken > 0) dealt[1 - i]! += taken;
+  });
 }
 
 const ITEMS = ['Rematch', 'Watch replay', 'Character select', 'Main menu'];

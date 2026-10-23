@@ -1,6 +1,8 @@
 // Draws a match: world, hit effects, camera, HUD and the F1 debug overlay.
-// Shared by live matches and replays. It only ever reads sim state.
+// Shared by live matches, replays and the netcode test. It only ever reads
+// sim state.
 
+import type { Sfx } from '../audio/sfx';
 import { Camera } from '../render/camera';
 import { drawDebugText, drawDebugWorld } from '../render/debug';
 import { Effects } from '../render/effects';
@@ -25,15 +27,23 @@ export class MatchView {
   private fps = { renderFps: 0, simFps: 0 };
   private fpsWindowStart = performance.now();
 
-  constructor(private app: App) {
+  /** `sfx`: where hit sounds go (a never-unlocked Sfx is silent). */
+  constructor(
+    private app: App,
+    sfx: Sfx = app.sfx,
+  ) {
     // Effects dedupe by frame number, so each match (or replay run) gets a fresh one.
-    this.effects = new Effects(app.sfx);
+    this.effects = new Effects(sfx);
   }
 
-  /** Call once per simulated frame, with the state before and after it. */
-  onStep(prev: MatchState, next: MatchState): void {
+  /**
+   * Call once per simulated frame, with the state before and after it. After
+   * a rollback, re-simulated frames come again (`resim`): effects already
+   * shown are skipped, ones the rollback revealed play late.
+   */
+  onStep(prev: MatchState, next: MatchState, resim = false): void {
     this.effects.onStep(prev, next);
-    this.simFrames++;
+    if (!resim) this.simFrames++;
   }
 
   /** `debugLines` are extra lines for the F1 overlay. */

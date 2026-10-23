@@ -10,11 +10,15 @@ import { ControlsScreen } from './controlsScreen';
 import type { View } from './draw';
 import { MainMenu } from './mainMenu';
 import { MatchScreen } from './matchScreen';
+import { NetTestScreen } from './netTestScreen';
 import { ReplayScreen } from './replayScreen';
 import { ResultsScreen, type MatchResult } from './results';
 
-/** Local versus (two players) or training (player 1 against an idle CPU dummy). */
-export type Mode = 'versus' | 'training';
+/**
+ * Local versus (two players), training (player 1 against an idle CPU dummy),
+ * or the netcode test (two players, each on their own simulated machine).
+ */
+export type Mode = 'versus' | 'training' | 'netTest';
 
 /** The most recent match played, for "Watch replay". */
 export interface LastMatch {
@@ -27,6 +31,8 @@ export interface Screen {
   tick(): void;
   /** `dtMs` is real time since the last draw, for render-only animation. */
   draw(ctx: CanvasRenderingContext2D, view: View, dtMs: number): void;
+  /** Called when switching to another screen (e.g. to remove DOM elements). */
+  leave?(): void;
 }
 
 export class App {
@@ -66,7 +72,7 @@ export class App {
   }
 
   startMatch(mode: Mode, chars: readonly number[]): void {
-    this.go(new MatchScreen(this, mode, chars), layoutFor(mode));
+    this.go(mode === 'netTest' ? new NetTestScreen(this, chars) : new MatchScreen(this, mode, chars), layoutFor(mode));
   }
 
   /** `fromReplay`: coming back from watching this match's replay. */
@@ -80,13 +86,14 @@ export class App {
   }
 
   private go(screen: Screen, layout: LayoutName): void {
+    this.screen.leave?.();
     this.screen = screen;
     this.controls.setLayout(layout);
     this.controls.allowPadSwap = screen instanceof CharSelectScreen;
   }
 }
 
-/** Local versus splits the keyboard between two players; everything else gives P1 all of it. */
+/** Two-player modes split the keyboard; everything else gives P1 all of it. */
 function layoutFor(mode: Mode): LayoutName {
-  return mode === 'versus' ? 'versus' : 'solo';
+  return mode === 'training' ? 'solo' : 'versus';
 }

@@ -38,8 +38,8 @@ export interface Cursor {
 export type SelectEvent = 'none' | 'move' | 'lock' | 'unlock' | 'start' | 'exit';
 
 /**
- * Character select. In versus, each player moves their own cursor and locks
- * in. In training, player 1 picks their fighter and then the CPU's.
+ * Character select. In two-player modes, each player moves their own cursor
+ * and locks in. In training, player 1 picks their fighter and then the CPU's.
  */
 export class CharSelectModel {
   readonly cursors: Cursor[];
@@ -58,7 +58,7 @@ export class CharSelectModel {
 
   /** The cursor player `slot` is moving right now, or -1. */
   activeCursor(slot: number): number {
-    if (this.mode === 'versus') return this.cursors[slot]!.locked ? -1 : slot;
+    if (this.mode !== 'training') return this.cursors[slot]!.locked ? -1 : slot;
     return this.cursors.findIndex((c) => !c.locked);
   }
 
@@ -71,7 +71,7 @@ export class CharSelectModel {
     presses.forEach((p, slot) => {
       if (this.mode === 'training' && slot > 0) return; // P1 drives both cursors
       if (p.back) {
-        const last = this.mode === 'versus' ? slot : this.lastLocked();
+        const last = this.mode !== 'training' ? slot : this.lastLocked();
         if (last >= 0 && this.cursors[last]!.locked) {
           this.cursors[last]!.locked = false;
           event = 'unlock';

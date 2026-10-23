@@ -15,6 +15,12 @@ const CELL_W = 150;
 const CELL_H = 160;
 const GAP = 14;
 const GRID_TOP = 84;
+const TITLES: Record<Mode, string> = { versus: 'Local Versus', training: 'Training', netTest: 'Netcode Test' };
+const SUBTITLES: Record<Mode, string> = {
+  versus: 'Both players pick a fighter',
+  training: "Pick your fighter, then the CPU's",
+  netTest: 'Both players pick a fighter · each then plays on their own machine, linked by a fake network',
+};
 
 interface StatBar {
   label: string;
@@ -93,11 +99,10 @@ export class CharSelectScreen implements Screen {
     const t = performance.now();
     drawBackdrop(ctx, view, t);
     beginLayout(ctx, view, W, H);
-    const training = this.mode === 'training';
     const chars = this.model.cursors.map((c) => c.index);
 
-    text(ctx, training ? 'Training' : 'Local Versus', W / 2, 46, { size: 34, bold: true, align: 'center', color: '#ffd166', outline: true });
-    text(ctx, training ? "Pick your fighter, then the CPU's" : 'Both players pick a fighter', W / 2, 72, {
+    text(ctx, TITLES[this.mode], W / 2, 46, { size: 34, bold: true, align: 'center', color: '#ffd166', outline: true });
+    text(ctx, SUBTITLES[this.mode], W / 2, 72, {
       size: 15,
       align: 'center',
       color: '#c9c7e8',

@@ -1,3 +1,4 @@
+import type { Session } from '../net/session';
 import { Action, ACTION_NAMES } from '../sim/actions';
 import { activeHitboxes, isIntangible } from '../sim/combat';
 import { FIGHTERS } from '../sim/fighters';
@@ -81,8 +82,23 @@ export function drawDebugText(ctx: CanvasRenderingContext2D, state: MatchState, 
 
   ctx.font = '13px ui-monospace, Consolas, monospace';
   ctx.textAlign = 'left';
+  const width = Math.max(...lines.map((l) => ctx.measureText(l).width)) + 16;
   ctx.fillStyle = 'rgba(0,0,0,0.6)';
-  ctx.fillRect(8, 8, 540, lines.length * 17 + 10);
+  ctx.fillRect(8, 8, width, lines.length * 17 + 10);
   ctx.fillStyle = '#d6ffd6';
   lines.forEach((l, i) => ctx.fillText(l, 16, 26 + i * 17));
+}
+
+const signed = (v: number) => `${v >= 0 ? '+' : ''}${v.toFixed(1)}`;
+
+/** A rollback session's numbers: ping, rollbacks, frame advantage, waits and checksums. */
+export function netDebugLines(s: Session): string[] {
+  const st = s.stats;
+  const ping = st.pingMs < 0 ? '–' : `${Math.round(st.pingMs)} ms`;
+  return [
+    `ping ${ping}   input delay ${s.inputDelay}   frame ${s.state.frame} (confirmed ${s.confirmed.frame})`,
+    `rollback ${st.rollbackFramesPerSec} frames/s   depth ${st.rollbackDepth} (max ${st.maxRollbackDepth})   total ${st.rollbacks}`,
+    `frame advantage local ${signed(s.localAdvantage)} / remote ${signed(s.remoteAdvantage)}   waits ${st.stalls}   skips ${st.skips}`,
+    s.desyncFrame >= 0 ? `DESYNC at frame ${s.desyncFrame}` : `checksums ${s.checksumsMatched} matched`,
+  ];
 }
