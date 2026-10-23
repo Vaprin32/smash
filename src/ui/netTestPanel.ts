@@ -41,8 +41,8 @@ export class NetTestPanel {
     const root = document.createElement('div');
     root.style.cssText =
       'position:fixed;top:0;left:0;right:0;z-index:1;display:flex;flex-wrap:wrap;align-items:center;gap:6px 22px;' +
-      'padding:8px 16px;background:#10142c;border-bottom:1px solid rgba(255,255,255,0.15);' +
-      'color:#e8e8f4;font:13px system-ui,sans-serif;user-select:none';
+      'padding:8px 16px;background:linear-gradient(#4a2f1b,#2e1d10);border-bottom:2px solid #b8862b;' +
+      'color:#f1e4c8;font:14px "Palatino Linotype","Book Antiqua",Palatino,Georgia,serif;user-select:none';
     const title = document.createElement('b');
     title.textContent = 'Netcode test';
     title.style.color = '#ffd166';
@@ -82,8 +82,8 @@ export class NetTestPanel {
       button.title = b.title;
       button.tabIndex = -1;
       button.style.cssText =
-        'padding:4px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.25);' +
-        'background:#262b52;color:#fff;font:inherit;cursor:pointer';
+        'padding:4px 10px;border-radius:6px;border:1px solid #b8862b;' +
+        'background:#5a3a20;color:#ffd166;font:inherit;cursor:pointer';
       button.addEventListener('click', () => {
         button.blur();
         b.run();

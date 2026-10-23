@@ -55,7 +55,7 @@ export class MainMenu implements Screen {
     const area = beginLayout(ctx, view, W, H);
 
     text(ctx, 'SMASH PROTOTYPE', W / 2, 130, { size: 64, bold: true, align: 'center', color: '#ffd166', outline: true });
-    text(ctx, 'Eight fighters · local versus · rollback netcode', W / 2, 168, { size: 18, align: 'center', color: '#c9c7e8' });
+    text(ctx, 'Eight champions of the realm · local versus · rollback netcode', W / 2, 168, { size: 18, align: 'center', color: '#d9c49a' });
     drawMenu(ctx, this.items, this.list.index, W / 2, 210, 340);
 
     // The roster, lined up on a floor, facing the middle.

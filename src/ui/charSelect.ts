@@ -105,7 +105,7 @@ export class CharSelectScreen implements Screen {
     text(ctx, SUBTITLES[this.mode], W / 2, 72, {
       size: 15,
       align: 'center',
-      color: '#c9c7e8',
+      color: '#d9c49a',
     });
 
     // Grid. Every fighter is drawn at the same scale, so sizes compare.
@@ -176,11 +176,12 @@ export class CharSelectScreen implements Screen {
     const tx = x + 210;
     text(ctx, this.playerLabel(slot), tx, y + 32, { size: 15, bold: true, color: slotColor(slot) });
     text(ctx, def.name, tx, y + 66, { size: 32, bold: true, color: tint(color, 0.35), outline: true });
-    text(ctx, lookOf(charId).blurb, tx, y + 92, { size: 13, color: '#d6d4ee' });
+    text(ctx, lookOf(charId).title, tx, y + 90, { size: 15, bold: true, color: '#ffd166' });
+    text(ctx, lookOf(charId).blurb, tx, y + 108, { size: 13, color: '#e6d6b0' });
 
     STAT_BARS[charId]!.forEach((bar, i) => {
-      const by = y + 118 + i * 26;
-      text(ctx, bar.label, tx, by + 12, { size: 14, color: '#c9c7e8' });
+      const by = y + 124 + i * 25;
+      text(ctx, bar.label, tx, by + 12, { size: 14, color: '#d9c49a' });
       roundRect(ctx, tx + 64, by, 200, 14, 6);
       ctx.fillStyle = 'rgba(255,255,255,0.12)';
       ctx.fill();
@@ -188,7 +189,7 @@ export class CharSelectScreen implements Screen {
       ctx.fillStyle = color;
       ctx.fill();
     });
-    text(ctx, `Air jumps: ${def.stats.airJumps}`, tx, y + 236, { size: 13, color: '#c9c7e8' });
+    text(ctx, `Air jumps: ${def.stats.airJumps}`, tx, y + 236, { size: 13, color: '#d9c49a' });
 
     const status = cur.locked ? 'READY' : '';
     if (status) text(ctx, status, x + w - 20, y + 34, { size: 20, bold: true, align: 'right', color: slotColor(slot), outline: true });

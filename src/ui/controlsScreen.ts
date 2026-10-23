@@ -61,7 +61,7 @@ export class ControlsScreen implements Screen {
     rows().forEach((row, r) => {
       const y = 180 + r * 56;
       row.forEach((cell, i) => {
-        text(ctx, cell, cols[i]!, y, { size: i === 0 ? 17 : i === 5 ? 14 : 15, bold: i === 0, color: i === 5 ? '#c9c7e8' : '#ffffff' });
+        text(ctx, cell, cols[i]!, y, { size: i === 0 ? 17 : i === 5 ? 14 : 15, bold: i === 0, color: i === 5 ? '#d9c49a' : '#ffffff' });
       });
     });
 

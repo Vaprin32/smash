@@ -98,7 +98,7 @@ export class ResultsScreen implements Screen {
     text(ctx, title, W / 2, 84, { size: 64, bold: true, align: 'center', color: titleColor, outline: true });
     const mins = Math.floor(r.seconds / 60);
     const secs = String(r.seconds % 60).padStart(2, '0');
-    text(ctx, `Match time ${mins}:${secs}`, W / 2, 114, { size: 15, align: 'center', color: '#c9c7e8' });
+    text(ctx, `Match time ${mins}:${secs}`, W / 2, 114, { size: 15, align: 'center', color: '#d9c49a' });
 
     r.chars.forEach((charId, slot) => {
       const cx = slot === 0 ? 290 : 810;
@@ -116,7 +116,7 @@ export class ResultsScreen implements Screen {
         `Falls  ${r.falls[slot]}`,
         `Damage dealt  ${r.damageDealt[slot]}%`,
       ];
-      lines.forEach((l, i) => text(ctx, l, tx, 280 + i * 32, { size: 18, color: '#e8e8f4' }));
+      lines.forEach((l, i) => text(ctx, l, tx, 280 + i * 32, { size: 18, color: '#f1e4c8' }));
       if (won) text(ctx, '★ WINNER', tx, 400, { size: 20, bold: true, color: '#ffd166' });
     });
 

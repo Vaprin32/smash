@@ -114,7 +114,7 @@ export class ReplayScreen implements Screen {
 
     // Top-right bar (clear of the F1 panel): label, time, speed and progress.
     const barW = 420, barX = area.left + area.width - barW - 16, barY = area.top + 16;
-    ctx.fillStyle = 'rgba(10,12,28,0.72)';
+    ctx.fillStyle = 'rgba(38,24,13,0.86)';
     roundRect(ctx, barX, barY, barW, 52, 10);
     ctx.fill();
     text(ctx, 'REPLAY', barX + 16, barY + 24, { size: 16, bold: true, color: '#ff6b6b' });
@@ -127,7 +127,7 @@ export class ReplayScreen implements Screen {
     ctx.fillRect(barX + 16, barY + 36, ((barW - 32) * p.state.frame) / Math.max(1, p.length), 5);
 
     if (p.done) {
-      const big = { size: 110, bold: true, align: 'center' as const, outline: true, color: '#ffffff' };
+      const big = { size: 110, bold: true, align: 'center' as const, outline: true, color: '#f6ecd2' };
       text(ctx, matchWinner(p.state) === MATCH_ON ? 'END' : 'GAME!', W / 2, H / 2 - 40, big);
       text(ctx, 'J / Enter: watch again · Esc: back', W / 2, H / 2 + 10, { size: 18, align: 'center', outline: true });
     }

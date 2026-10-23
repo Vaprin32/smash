@@ -1,4 +1,4 @@
-// Pieces shared by local and networked matches: the 3-2-1-GO countdown, the
+// Pieces shared by local and networked matches: the 3-2-1-FIGHT countdown, the
 // "GAME!" pause before the results, and ignoring buttons that are already
 // held when play starts.
 
@@ -50,7 +50,7 @@ export interface BannerState {
   ended: boolean;
 }
 
-/** The big centered "3", "2", "1", "GO!" or "GAME!". */
+/** The big centered "3", "2", "1", "FIGHT!" or "GAME!". */
 export function drawBanner(ctx: CanvasRenderingContext2D, view: View, b: BannerState): void {
   const W = 1100, H = 720;
   beginLayout(ctx, view, W, H);
@@ -63,8 +63,8 @@ export function drawBanner(ctx: CanvasRenderingContext2D, view: View, b: BannerS
     ctx.globalAlpha = 1;
   } else if (b.sinceStart < GO_TICKS && !b.ended) {
     ctx.globalAlpha = 1 - b.sinceStart / GO_TICKS;
-    text(ctx, 'GO!', W / 2, H / 2 - 40, { ...big, color: '#7dff9a' });
+    text(ctx, 'FIGHT!', W / 2, H / 2 - 40, { ...big, color: '#ff9a4c' });
     ctx.globalAlpha = 1;
   }
-  if (b.ended) text(ctx, 'GAME!', W / 2, H / 2 - 40, { ...big, color: '#ffffff' });
+  if (b.ended) text(ctx, 'GAME!', W / 2, H / 2 - 40, { ...big, color: '#f6ecd2' });
 }

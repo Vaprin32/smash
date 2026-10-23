@@ -27,6 +27,8 @@ character select → 3-stock match → results (Rematch / Watch replay / Charact
 | Sable | long reach (sword) | disjointed normals, tipper Lunge, Whirl Slash |
 | Rook | all-rounder | Palm Burst, Spin Kick, Riposte counter |
 
+The look is medieval: a stone rampart at sunset under a far castle, oak and gold menus, heraldic HUD shields. Palette, fonts and the shared pieces are in `src/render/theme.ts`; each fighter's title (the Iron Knight, the Cleric, ...) is in `src/render/looks.ts`.
+
 Each fighter's stats live in `src/sim/fighters/<name>.ts`. Moves are in `src/sim/moves/<name>.ts`:
 a tuning line (frames / size / reach / damage / knockback, relative to Wisp's moveset)
 plus that fighter's hand-written specials. Looks (proportions, colors, accessory) are in

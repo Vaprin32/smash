@@ -156,7 +156,7 @@ export class NetTestScreen implements Screen {
     const w = Math.max(1, Math.floor(view.w / 2));
     const h = Math.max(1, view.h - top);
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.fillStyle = '#0d1020';
+    ctx.fillStyle = '#140d10';
     ctx.fillRect(0, 0, view.w, view.h);
 
     this.halves.forEach((half, slot) => {
