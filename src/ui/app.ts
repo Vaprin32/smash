@@ -4,9 +4,11 @@
 import type { Sfx } from '../audio/sfx';
 import { BINDINGS, type LayoutName } from '../input/bindings';
 import type { Controls } from '../input/controls';
+import { DEFAULT_CPU_LEVEL } from '../ai/levels';
 import type { Replay } from '../sim/replay';
 import { CharSelectScreen } from './charSelect';
 import { ControlsScreen } from './controlsScreen';
+import { CpuSetupScreen } from './cpuSetup';
 import type { View } from './draw';
 import { MainMenu } from './mainMenu';
 import { MatchScreen } from './matchScreen';
@@ -15,10 +17,19 @@ import { ReplayScreen } from './replayScreen';
 import { ResultsScreen, type MatchResult } from './results';
 
 /**
- * Local versus (two players), training (player 1 against an idle CPU dummy),
- * or the netcode test (two players, each on their own simulated machine).
+ * Local versus (two players), versus CPU (player 1 against 1-3 computer
+ * players, everyone for themselves), training (player 1 against an idle CPU
+ * dummy), or the netcode test (two players, each on their own simulated machine).
  */
-export type Mode = 'versus' | 'training' | 'netTest';
+export type Mode = 'versus' | 'cpu' | 'training' | 'netTest';
+
+/** Versus CPU settings, kept for the session. */
+export interface CpuSettings {
+  /** 1 to 3. */
+  opponents: number;
+  /** Index into CPU_LEVELS. */
+  level: number;
+}
 
 /** The most recent match played, for "Watch replay". */
 export interface LastMatch {
@@ -40,6 +51,7 @@ export class App {
   /** F1 debug overlay (matches only). */
   debug = false;
   lastMatch: LastMatch | null = null;
+  cpu: CpuSettings = { opponents: 1, level: DEFAULT_CPU_LEVEL };
 
   constructor(
     readonly controls: Controls,
@@ -64,6 +76,10 @@ export class App {
 
   toControls(): void {
     this.go(new ControlsScreen(this), 'solo');
+  }
+
+  toCpuSetup(): void {
+    this.go(new CpuSetupScreen(this), 'solo');
   }
 
   /** `chars` puts the cursors back on the fighters picked last time. */
@@ -95,5 +111,5 @@ export class App {
 
 /** Two-player modes split the keyboard; everything else gives P1 all of it. */
 function layoutFor(mode: Mode): LayoutName {
-  return mode === 'training' ? 'solo' : 'versus';
+  return mode === 'training' || mode === 'cpu' ? 'solo' : 'versus';
 }

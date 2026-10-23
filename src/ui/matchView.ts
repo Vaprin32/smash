@@ -54,7 +54,7 @@ export class MatchView {
     this.camera.shakeX = this.effects.shakeX * dpr;
     this.camera.shakeY = this.effects.shakeY * dpr;
     this.camera.update(state, w, h);
-    drawWorld(ctx, state, this.camera, w, h);
+    drawWorld(ctx, state, this.camera, w, h, hud.labels);
     this.effects.draw(ctx);
     drawForeground(ctx, this.camera, w, h, performance.now());
     const debug = this.app.debug;

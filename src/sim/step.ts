@@ -110,6 +110,7 @@ function updateFighter(f: FighterState, slot: number, input: number, stage: Stag
   }
 
   moveFighter(f, def, stage);
+  if (f.ground >= 0 && isStanding(f.action)) f.lastHitBy = -1;
 
   if (outsideBlastZone(f, stage)) {
     f.stocks--;
@@ -148,5 +149,11 @@ function respawn(f: FighterState, slot: number, def: FighterDef, stage: StageDef
   f.hitstun = 0;
   f.hitlag = 0;
   f.invincible = RESPAWN_INVINCIBILITY;
+  f.lastHitBy = -1;
   setAction(f, Action.Respawn);
+}
+
+/** Back on their feet and in control (the end of a combo, for KO credit). */
+function isStanding(action: number): boolean {
+  return action === Action.Idle || action === Action.Walk || action === Action.Run || action === Action.Dash;
 }

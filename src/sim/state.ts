@@ -66,6 +66,11 @@ export interface FighterState {
   dashCooldown: number;
   /** SimEvent that happened to this fighter this frame (cleared every frame). */
   event: number;
+  /**
+   * Slot of the fighter that last damaged or launched this one, or -1. Cleared
+   * once back on their feet and on respawn, so a KO goes to whoever caused it.
+   */
+  lastHitBy: number;
 }
 
 /** Serialization order. Append new fields at the end. */
@@ -108,6 +113,7 @@ export const FIGHTER_FIELDS = [
   'shieldHp',
   'dashCooldown',
   'event',
+  'lastHitBy',
 ] as const satisfies readonly (keyof FighterState)[];
 
 export interface MatchState {
@@ -119,22 +125,26 @@ export interface MatchState {
 
 const HEADER_INTS = 4;
 
+/** Most fighters a match can hold (the stage has a spawn layout for each count). */
+export const MAX_PLAYERS = 4;
+
 export interface MatchSetup {
   seed: number;
   stageId: number;
-  /** One fighter index (into FIGHTERS) per player slot. */
+  /** One fighter index (into FIGHTERS) per player slot, 1 to MAX_PLAYERS of them. */
   chars: readonly number[];
   stocks: number;
 }
 
 export function createMatch(setup: MatchSetup): MatchState {
   const stage = STAGES[setup.stageId]!;
+  const spawns = stage.spawns[setup.chars.length - 1]!;
   return {
     frame: 0,
     rng: seedRng(setup.seed),
     stageId: setup.stageId,
     fighters: setup.chars.map((charId, i) => {
-      const spawn = stage.spawns[i]!;
+      const spawn = spawns[i]!;
       return {
         charId,
         x: spawn.x,
@@ -174,6 +184,7 @@ export function createMatch(setup: MatchSetup): MatchState {
         shieldHp: SHIELD_MAX,
         dashCooldown: 0,
         event: 0,
+        lastHitBy: -1,
       };
     }),
   };

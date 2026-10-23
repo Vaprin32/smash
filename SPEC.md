@@ -8,7 +8,7 @@ Read this whole file before writing code. Re-read the "Hard rules" section befor
 
 - Build **one milestone at a time**, in order. When a milestone is done: run the tests, run the type checker, then stop and give me (1) a short summary of what changed, (2) exact steps to try it in the browser, and (3) anything you were unsure about. Wait for my go-ahead before starting the next milestone.
 - Commit to git at the end of each milestone with a clear message.
-- **Always keep `dist/smash.html` up to date.** I test the game locally by opening that file, not the dev server. After every code change (milestones, fixes, tweaks, anything that affects the game), run `npm run build:html` before handing back, and check the change in that file. Never tell me something is fixed unless the rebuilt `smash.html` has it.
+- **Always keep `dist/index.html` up to date.** I test the game locally by opening that file, not the dev server. After every code change (milestones, fixes, tweaks, anything that affects the game), run `npm run build:html` before handing back, and check the change in that file. Never tell me something is fixed unless the rebuilt `dist/index.html` has it.
 - Prefer small, readable files. No dependency gets added unless it saves real work; ask me before adding anything heavy.
 - If something in this spec turns out to be a bad idea in practice, tell me and propose an alternative instead of silently deviating.
 

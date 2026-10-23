@@ -39,7 +39,8 @@ export type SelectEvent = 'none' | 'move' | 'lock' | 'unlock' | 'start' | 'exit'
 
 /**
  * Character select. In two-player modes, each player moves their own cursor
- * and locks in. In training, player 1 picks their fighter and then the CPU's.
+ * and locks in. Against CPUs (versus CPU, training), player 1 picks their
+ * fighter and then each CPU's, in order.
  */
 export class CharSelectModel {
   readonly cursors: Cursor[];
@@ -56,10 +57,15 @@ export class CharSelectModel {
     return this.cursors.every((c) => c.locked);
   }
 
+  /** Player 1 drives every cursor, one after another. */
+  get p1Picks(): boolean {
+    return this.mode === 'training' || this.mode === 'cpu';
+  }
+
   /** The cursor player `slot` is moving right now, or -1. */
   activeCursor(slot: number): number {
-    if (this.mode !== 'training') return this.cursors[slot]!.locked ? -1 : slot;
-    return this.cursors.findIndex((c) => !c.locked);
+    if (!this.p1Picks) return this.cursors[slot]!.locked ? -1 : slot;
+    return slot === 0 ? this.cursors.findIndex((c) => !c.locked) : -1;
   }
 
   /** `confirm` is Enter or a pad's Start; `back` is Escape. */
@@ -69,9 +75,9 @@ export class CharSelectModel {
 
     let event: SelectEvent = 'none';
     presses.forEach((p, slot) => {
-      if (this.mode === 'training' && slot > 0) return; // P1 drives both cursors
+      if (this.p1Picks && slot > 0) return; // P1 drives every cursor
       if (p.back) {
-        const last = this.mode !== 'training' ? slot : this.lastLocked();
+        const last = this.p1Picks ? this.lastLocked() : slot;
         if (last >= 0 && this.cursors[last]!.locked) {
           this.cursors[last]!.locked = false;
           event = 'unlock';

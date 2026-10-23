@@ -16,7 +16,7 @@ import { beginLayout, text, type View } from './draw';
 import { countDown, COUNTDOWN, drawBanner, END_TICKS, HeldGate } from './matchFlow';
 import { MatchView } from './matchView';
 import { NetTestPanel, type NetTestSettings } from './netTestPanel';
-import { matchResult, tallyDamage } from './results';
+import { matchResult, MatchStats } from './results';
 
 /** Kept across rematches. The defaults are M5's target conditions. */
 const settings: NetTestSettings = { latencyMs: 100, jitterMs: 10, lossPercent: 5, inputDelay: DEFAULT_INPUT_DELAY };
@@ -46,7 +46,7 @@ export class NetTestScreen implements Screen {
   private sinceStart = 0;
   private endTicks = -1;
   private hitch = 0;
-  private damageDealt = [0, 0];
+  private stats = new MatchStats(2);
 
   constructor(
     private app: App,
@@ -88,7 +88,7 @@ export class NetTestScreen implements Screen {
     this.sinceStart = 0;
     this.endTicks = -1;
     this.hitch = 0;
-    this.damageDealt = [0, 0];
+    this.stats = new MatchStats(this.chars.length);
     this.gate.block();
   }
 
@@ -105,7 +105,7 @@ export class NetTestScreen implements Screen {
           now: clock,
           inputDelay: settings.inputDelay,
           onStep: (prev, next, resim) => this.halves[slot]!.view.onStep(prev, next, resim),
-          onConfirm: slot === 0 ? (prev, next) => tallyDamage(this.damageDealt, prev, next) : undefined,
+          onConfirm: slot === 0 ? (prev, next) => this.stats.onStep(prev, next) : undefined,
         }),
     );
   }
@@ -148,7 +148,7 @@ export class NetTestScreen implements Screen {
 
   private finish(): void {
     this.keepReplay();
-    this.app.toResults(matchResult('netTest', this.chars, this.sessions[0]!.confirmed, this.damageDealt));
+    this.app.toResults(matchResult('netTest', this.chars, this.sessions[0]!.confirmed, this.stats));
   }
 
   draw(ctx: CanvasRenderingContext2D, view: View, dtMs: number): void {

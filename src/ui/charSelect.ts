@@ -1,3 +1,4 @@
+import { CPU_LEVELS } from '../ai/levels';
 import { keysSummary } from '../input/keyLabels';
 import { idlePose } from '../render/animations';
 import { fighterColor, lookOf, slotColor } from '../render/renderer';
@@ -8,6 +9,7 @@ import { MoveId } from '../sim/moves/types';
 import type { App, Mode, Screen } from './app';
 import { beginLayout, drawBackdrop, drawFigure, panel, roundRect, text, type View } from './draw';
 import { CharSelectModel, GRID_COLS } from './menuModel';
+import { isCpuSlot, playerLabel } from './players';
 
 const W = 1100;
 const H = 760;
@@ -15,9 +17,10 @@ const CELL_W = 150;
 const CELL_H = 160;
 const GAP = 14;
 const GRID_TOP = 84;
-const TITLES: Record<Mode, string> = { versus: 'Local Versus', training: 'Training', netTest: 'Netcode Test' };
+const TITLES: Record<Mode, string> = { versus: 'Local Versus', cpu: 'Versus CPU', training: 'Training', netTest: 'Netcode Test' };
 const SUBTITLES: Record<Mode, string> = {
   versus: 'Both players pick a fighter',
+  cpu: "Pick your fighter, then each CPU's (they start on random fighters)",
   training: "Pick your fighter, then the CPU's",
   netTest: 'Both players pick a fighter · each then plays on their own machine, linked by a fake network',
 };
@@ -67,7 +70,7 @@ export class CharSelectScreen implements Screen {
     readonly mode: Mode,
     chars?: readonly number[],
   ) {
-    this.model = new CharSelectModel(mode, FIGHTERS.length, chars ?? [0, 1]);
+    this.model = new CharSelectModel(mode, FIGHTERS.length, chars ?? (mode === 'cpu' ? cpuStart(app.cpu.opponents) : [0, 1]));
   }
 
   tick(): void {
@@ -86,7 +89,8 @@ export class CharSelectScreen implements Screen {
         break;
       case 'exit':
         sfx.back();
-        this.app.toMainMenu();
+        if (this.mode === 'cpu') this.app.toCpuSetup();
+        else this.app.toMainMenu();
         break;
       case 'start':
         sfx.go();
@@ -109,11 +113,10 @@ export class CharSelectScreen implements Screen {
     });
 
     // Grid. Every fighter is drawn at the same scale, so sizes compare.
-    FIGHTERS.forEach((def, i) => {
+    FIGHTERS.forEach((_def, i) => {
       const { x, y } = cellRect(i);
       panel(ctx, x, y, CELL_W, CELL_H);
       drawFigure(ctx, i, lookOf(i).body, x + CELL_W / 2, y + CELL_H - 34, 1.1, 1, idlePose(this.frame + i * 13), t);
-      text(ctx, def.name, x + CELL_W / 2, y + CELL_H - 12, { size: 16, bold: true, align: 'center' });
     });
     this.model.cursors.forEach((cur, slot) => {
       const { x, y } = cellRect(cur.index);
@@ -125,16 +128,27 @@ export class CharSelectScreen implements Screen {
       const label = `${cur.locked ? '✓ ' : ''}${this.playerLabel(slot)}`;
       ctx.font = `bold 14px system-ui, sans-serif`;
       const bw = ctx.measureText(label).width + 14;
-      const bx = slot === 0 ? x - 4 : x + CELL_W - bw + 4;
-      roundRect(ctx, bx, y - 10, bw, 22, 8);
+      // P1 and P2 on the top corners, P3 and P4 just under them (clear of the name).
+      const bx = slot % 2 === 0 ? x - 4 : x + CELL_W - bw + 4;
+      const by = slot < 2 ? y - 10 : y + 16;
+      roundRect(ctx, bx, by, bw, 22, 8);
       ctx.fillStyle = slotColor(slot);
       ctx.fill();
-      text(ctx, label, bx + bw / 2, y + 6, { size: 14, bold: true, align: 'center' });
+      text(ctx, label, bx + bw / 2, by + 16, { size: 14, bold: true, align: 'center' });
+    });
+    // Names on top of the cursor rings.
+    FIGHTERS.forEach((def, i) => {
+      const { x, y } = cellRect(i);
+      text(ctx, def.name, x + CELL_W / 2, y + CELL_H - 12, { size: 16, bold: true, align: 'center', outline: true });
     });
 
-    // One preview panel per player.
+    // One preview panel per player: wide ones for two, narrow ones for three or four.
     const top = GRID_TOP + 2 * CELL_H + GAP + 18;
-    this.model.cursors.forEach((cur, slot) => this.drawPreview(ctx, slot, cur.index, chars, 30 + slot * 530, top, t));
+    const n = this.model.cursors.length;
+    this.model.cursors.forEach((cur, slot) => {
+      if (n <= 2) this.drawPreview(ctx, slot, cur.index, chars, 30 + slot * 530, top, t);
+      else this.drawSmallPreview(ctx, slot, cur.index, chars, top, t);
+    });
 
     const footY = 742;
     if (this.model.ready) {
@@ -152,7 +166,42 @@ export class CharSelectScreen implements Screen {
   }
 
   private playerLabel(slot: number): string {
-    return this.mode === 'training' && slot === 1 ? 'CPU' : `P${slot + 1}`;
+    return playerLabel(this.mode, slot, this.model.cursors.length);
+  }
+
+  private isActive(slot: number): boolean {
+    return this.model.activeCursor(0) === slot || this.model.activeCursor(slot) === slot;
+  }
+
+  /** A narrow preview (three or four players): name, figure and stat bars stacked. */
+  private drawSmallPreview(ctx: CanvasRenderingContext2D, slot: number, charId: number, chars: readonly number[], y: number, t: number): void {
+    const n = this.model.cursors.length;
+    const gap = 16;
+    const w = (W - 60 - (n - 1) * gap) / n, h = 270;
+    const x = 30 + slot * (w + gap);
+    const cur = this.model.cursors[slot]!;
+    panel(ctx, x, y, w, h, cur.locked || this.isActive(slot) ? slotColor(slot) : undefined);
+
+    const def = FIGHTERS[charId]!;
+    const color = fighterColor(chars, slot);
+    text(ctx, this.playerLabel(slot), x + 14, y + 26, { size: 15, bold: true, color: slotColor(slot) });
+    if (cur.locked) text(ctx, 'READY', x + w - 14, y + 26, { size: 16, bold: true, align: 'right', color: slotColor(slot), outline: true });
+    text(ctx, def.name, x + w / 2, y + 56, { size: 24, bold: true, align: 'center', color: tint(color, 0.35), outline: true });
+    text(ctx, lookOf(charId).title, x + w / 2, y + 76, { size: 13, bold: true, align: 'center', color: '#ffd166' });
+    drawFigure(ctx, charId, color, x + w / 2, y + 180, 1.05, slot % 2 === 0 ? 1 : -1, idlePose(this.frame), t);
+
+    const barX = x + 66, barW = w - 80;
+    STAT_BARS[charId]!.forEach((bar, i) => {
+      const by = y + 192 + i * 16;
+      text(ctx, bar.label, x + 14, by + 10, { size: 12, color: '#d9c49a' });
+      roundRect(ctx, barX, by, barW, 10, 5);
+      ctx.fillStyle = 'rgba(255,255,255,0.12)';
+      ctx.fill();
+      roundRect(ctx, barX, by, Math.max(10, barW * bar.value), 10, 5);
+      ctx.fillStyle = color;
+      ctx.fill();
+    });
+    text(ctx, this.deviceLine(slot), x + w / 2, y + h - 9, { size: 11, align: 'center', color: 'rgba(255,255,255,0.55)' });
   }
 
   private drawPreview(
@@ -166,8 +215,7 @@ export class CharSelectScreen implements Screen {
   ): void {
     const w = 510, h = 270;
     const cur = this.model.cursors[slot]!;
-    const active = this.model.activeCursor(0) === slot || this.model.activeCursor(slot) === slot;
-    panel(ctx, x, y, w, h, cur.locked || active ? slotColor(slot) : undefined);
+    panel(ctx, x, y, w, h, cur.locked || this.isActive(slot) ? slotColor(slot) : undefined);
 
     const def = FIGHTERS[charId]!;
     const color = fighterColor(chars, slot);
@@ -198,8 +246,19 @@ export class CharSelectScreen implements Screen {
 
   private deviceLine(slot: number): string {
     if (this.mode === 'training' && slot === 1) return 'Stands still · chosen by P1';
+    if (isCpuSlot(this.mode, slot)) return `${CPU_LEVELS[this.app.cpu.level]!.name} CPU · chosen by P1`;
     const pads = this.app.controls.padsOf(slot).map((n) => `Pad ${n}`);
     const keys = keysSummary(this.app.controls.keyboard.keysOf(slot));
     return [...(keys ? [`Keys: ${keys}`] : []), ...pads].join(' · ') || 'Connect a gamepad';
   }
+}
+
+/** Player 1 on the first fighter, each CPU on a different random one. */
+function cpuStart(opponents: number): number[] {
+  const others = FIGHTERS.map((_, i) => i).slice(1);
+  for (let i = others.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [others[i], others[j]] = [others[j]!, others[i]!];
+  }
+  return [0, ...others.slice(0, opponents)];
 }

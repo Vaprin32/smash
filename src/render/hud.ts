@@ -20,7 +20,8 @@ const PANEL_H = 84;
  * One oak plate per player along the bottom: a heraldic shield with the
  * fighter's face, their name, damage % and stock shields. `scale` is device
  * pixels per CSS pixel, so text stays readable on high-DPI screens. `labels`
- * adds a note after a player's name (e.g. "CPU").
+ * replaces a player's "P1" tag (e.g. "CPU 2"). Plates shrink to fit when the
+ * window is too narrow for all of them.
  */
 export function drawHud(
   ctx: CanvasRenderingContext2D,
@@ -31,9 +32,10 @@ export function drawHud(
   labels: readonly string[],
   hint = '',
 ): void {
-  ctx.setTransform(scale, 0, 0, scale, 0, 0);
-  const w = viewW / scale, h = viewH / scale;
   const n = state.fighters.length;
+  const fit = Math.min(1, viewW / scale / ((n + 1) * (PANEL_W + 12)));
+  ctx.setTransform(scale * fit, 0, 0, scale * fit, 0, 0);
+  const w = viewW / scale / fit, h = viewH / scale / fit;
   const chars = state.fighters.map((f) => f.charId);
 
   state.fighters.forEach((f, i) => {
@@ -55,7 +57,7 @@ export function drawHud(
     drawPortrait(ctx, look, fighterColor(chars, i), sx + sw / 2, sy + sw * 0.52, sw * 0.95);
     ctx.restore();
 
-    const tag = `P${i + 1}${labels[i] ? ` ${labels[i]}` : ''}`;
+    const tag = labels[i] || `P${i + 1}`;
     ctx.textAlign = 'left';
     ctx.fillStyle = slotColor(i);
     ctx.font = `bold 13px ${SERIF}`;

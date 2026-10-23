@@ -135,7 +135,7 @@ export function resolveHits(s: MatchState): void {
     if (isCountering(v)) applyCounter(a, v, hit);
     else if (isShieldAction(v.action)) applyShieldHit(a, v, hit);
     else if (v.action === Action.ShieldDrop && v.actionFrame <= PARRY_WINDOW) applyParry(a, v, hit);
-    else applyHit(a, v, hit.v, hit.h, hit.dir, hit.melee);
+    else applyHit(a, hit.a, v, hit.v, hit.h, hit.dir, hit.melee);
   }
 
   for (const g of grabs) {
@@ -179,9 +179,18 @@ export function knockback(h: HitboxDef, damage: number, weight: number): number 
  * Damage and launch `v`. `dir` is the horizontal direction the hitbox angle is
  * measured from (attacker facing, or the projectile's travel direction).
  */
-export function applyHit(a: FighterState, v: FighterState, victimIndex: number, h: HitboxDef, dir: number, melee: boolean): void {
+export function applyHit(
+  a: FighterState,
+  attackerIndex: number,
+  v: FighterState,
+  victimIndex: number,
+  h: HitboxDef,
+  dir: number,
+  melee: boolean,
+): void {
   const vst = FIGHTERS[v.charId]!.stats;
   v.damage = Math.min(MAX_DAMAGE, v.damage + h.damage);
+  v.lastHitBy = attackerIndex;
   const kb = knockback(h, v.damage, vst.weight);
 
   setAction(v, Action.Hitstun);

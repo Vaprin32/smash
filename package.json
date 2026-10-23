@@ -5,9 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "build": "tsc --noEmit && vite build --outDir dist/app --emptyOutDir",
     "build:html": "node scripts/build-html.mjs",
-    "preview": "vite preview",
+    "preview": "vite preview --outDir dist/app",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },

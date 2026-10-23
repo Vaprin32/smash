@@ -19,7 +19,7 @@ export class MainMenu implements Screen {
     private app: App,
     select?: string,
   ) {
-    this.items = ['Local Versus', 'Training', 'Netcode test', ...(app.lastMatch ? ['Watch replay'] : []), 'Controls'];
+    this.items = ['Local Versus', 'Versus CPU', 'Training', 'Netcode test', ...(app.lastMatch ? ['Watch replay'] : []), 'Controls'];
     this.list = new MenuList(this.items.length);
     this.list.index = Math.max(0, this.items.indexOf(select ?? ''));
   }
@@ -34,6 +34,9 @@ export class MainMenu implements Screen {
     switch (this.items[this.list.index]) {
       case 'Local Versus':
         this.app.toCharSelect('versus');
+        break;
+      case 'Versus CPU':
+        this.app.toCpuSetup();
         break;
       case 'Training':
         this.app.toCharSelect('training');

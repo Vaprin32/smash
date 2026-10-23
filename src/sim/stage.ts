@@ -29,8 +29,8 @@ export interface StageDef {
   blocks: readonly Block[];
   platforms: readonly Platform[];
   blast: { left: number; right: number; top: number; bottom: number };
-  /** Match-start positions, one per player slot. */
-  spawns: readonly SpawnPoint[];
+  /** Match-start positions: `spawns[n - 1]` has one per player slot for an n-player match. */
+  spawns: readonly (readonly SpawnPoint[])[];
   /** Respawn positions (above the stage), one per player slot. */
   respawns: readonly { x: number; y: number }[];
 }
@@ -53,12 +53,28 @@ export const STAGES: readonly StageDef[] = [
     ],
     blast: { left: px(-1150), right: px(1150), top: px(-950), bottom: px(650) },
     spawns: [
-      { x: px(-180), y: 0, ground: 0 },
-      { x: px(180), y: 0, ground: 0 },
+      [{ x: px(-180), y: 0, ground: 0 }],
+      [
+        { x: px(-180), y: 0, ground: 0 },
+        { x: px(180), y: 0, ground: 0 },
+      ],
+      [
+        { x: px(-240), y: 0, ground: 0 },
+        { x: px(240), y: 0, ground: 0 },
+        { x: 0, y: 0, ground: 0 },
+      ],
+      [
+        { x: px(-240), y: 0, ground: 0 },
+        { x: px(240), y: 0, ground: 0 },
+        { x: px(-80), y: 0, ground: 0 },
+        { x: px(80), y: 0, ground: 0 },
+      ],
     ],
     respawns: [
       { x: px(-100), y: px(-380) },
       { x: px(100), y: px(-380) },
+      { x: px(-260), y: px(-380) },
+      { x: px(260), y: px(-380) },
     ],
   },
 ];

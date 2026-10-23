@@ -55,7 +55,7 @@ export class ControlsScreen implements Screen {
 
     const cols = [36, 124, 262, 384, 506, 668];
     panel(ctx, 16, 100, W - 32, 470);
-    ['', 'Training (P1)', 'Versus P1', 'Versus P2', 'Gamepad', 'What it does'].forEach((h, i) => {
+    ['', 'Solo (P1)', 'Versus P1', 'Versus P2', 'Gamepad', 'What it does'].forEach((h, i) => {
       text(ctx, h, cols[i]!, 135, { size: 16, bold: true, color: '#ffd166' });
     });
     rows().forEach((row, r) => {

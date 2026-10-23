@@ -1,4 +1,4 @@
-// Builds dist/smash.html: one self-contained file (JS inlined) that runs
+// Builds dist/index.html: one self-contained file (JS inlined) that runs
 // straight from disk via file://, no server needed.
 
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -28,5 +28,5 @@ const html = String(page.source)
   .replace('</body>', () => `<script>\n${code}</script>\n</body>`);
 
 mkdirSync('dist', { recursive: true });
-writeFileSync('dist/smash.html', html);
-console.log(`wrote dist/smash.html (${(html.length / 1024).toFixed(1)} kB)`);
+writeFileSync('dist/index.html', html);
+console.log(`wrote dist/index.html (${(html.length / 1024).toFixed(1)} kB)`);

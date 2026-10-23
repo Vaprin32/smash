@@ -1,6 +1,7 @@
 import { defeatPose, idlePose, victoryPose } from '../render/animations';
 import { fighterColor, slotColor } from '../render/renderer';
 import { tint } from '../render/skeleton';
+import { Action } from '../sim/actions';
 import { FIGHTERS } from '../sim/fighters';
 import { DRAW, matchWinner } from '../sim/outcome';
 import { DEFAULT_STOCKS } from '../sim/rules';
@@ -8,38 +9,70 @@ import type { MatchState } from '../sim/state';
 import type { App, Mode, Screen } from './app';
 import { beginLayout, drawBackdrop, drawFigure, drawMenu, panel, text, type View } from './draw';
 import { MenuList } from './menuModel';
+import { playerLabel } from './players';
 
 export interface MatchResult {
   mode: Mode;
   chars: number[];
   /** Winning slot, or DRAW. */
   winner: number;
+  /** Finishing place per slot (1 = winner); fighters knocked out on the same frame share one. */
+  places: number[];
   stocksLeft: number[];
   falls: number[];
+  kos: number[];
   damageDealt: number[];
   seconds: number;
 }
 
+/**
+ * Per-player tallies kept while a match runs, read from each frame's state
+ * change: damage dealt and KOs (credited to `lastHitBy`), and when each
+ * player ran out of stocks.
+ */
+export class MatchStats {
+  readonly damageDealt: number[];
+  readonly kos: number[];
+  /** Frame each player went out, or -1 while still in. */
+  readonly outFrame: number[];
+
+  constructor(players: number) {
+    this.damageDealt = new Array<number>(players).fill(0);
+    this.kos = new Array<number>(players).fill(0);
+    this.outFrame = new Array<number>(players).fill(-1);
+  }
+
+  onStep(prev: MatchState, next: MatchState): void {
+    next.fighters.forEach((f, i) => {
+      const before = prev.fighters[i]!;
+      const by = f.lastHitBy;
+      const taken = f.damage - before.damage;
+      if (taken > 0 && by >= 0 && by !== i) this.damageDealt[by]! += taken;
+      if (f.stocks < before.stocks && by >= 0 && by !== i) this.kos[by]!++;
+      if (f.action === Action.Out && before.action !== Action.Out) this.outFrame[i] = next.frame;
+    });
+  }
+}
+
 /** The result of a match that ended in `final`. */
-export function matchResult(mode: Mode, chars: readonly number[], final: MatchState, damageDealt: readonly number[]): MatchResult {
+export function matchResult(mode: Mode, chars: readonly number[], final: MatchState, stats: MatchStats): MatchResult {
+  // Later out = better; still in = best.
+  const rank = (i: number) => (stats.outFrame[i]! < 0 ? Infinity : stats.outFrame[i]!);
   return {
     mode,
     chars: [...chars],
     winner: matchWinner(final),
+    places: chars.map((_, i) => 1 + chars.filter((_c, j) => rank(j) > rank(i)).length),
     stocksLeft: final.fighters.map((f) => f.stocks),
     falls: final.fighters.map((f) => DEFAULT_STOCKS - f.stocks),
-    damageDealt: [...damageDealt],
+    kos: [...stats.kos],
+    damageDealt: [...stats.damageDealt],
     seconds: Math.floor(final.frame / 60),
   };
 }
 
-/** Add the damage each fighter took from `prev` to `next` to the other one's tally (1v1). */
-export function tallyDamage(dealt: number[], prev: MatchState, next: MatchState): void {
-  next.fighters.forEach((f, i) => {
-    const taken = f.damage - prev.fighters[i]!.damage;
-    if (taken > 0) dealt[1 - i]! += taken;
-  });
-}
+const PLACE_NAMES = ['1st', '2nd', '3rd', '4th'];
+const PLACE_COLORS = ['#ffd166', '#d8dde6', '#d08a4e', '#9a8f80'];
 
 const ITEMS = ['Rematch', 'Watch replay', 'Character select', 'Main menu'];
 const WATCH_REPLAY = 1;
@@ -65,7 +98,7 @@ export class ResultsScreen implements Screen {
   }
 
   private label(slot: number): string {
-    return this.result.mode === 'training' && slot === 1 ? 'CPU' : `P${slot + 1}`;
+    return playerLabel(this.result.mode, slot, this.result.chars.length);
   }
 
   tick(): void {
@@ -100,26 +133,60 @@ export class ResultsScreen implements Screen {
     const secs = String(r.seconds % 60).padStart(2, '0');
     text(ctx, `Match time ${mins}:${secs}`, W / 2, 114, { size: 15, align: 'center', color: '#d9c49a' });
 
-    r.chars.forEach((charId, slot) => {
-      const cx = slot === 0 ? 290 : 810;
-      const won = slot === r.winner;
-      const color = fighterColor(r.chars, slot);
-      panel(ctx, cx - 210, 140, 420, 360, won ? slotColor(slot) : undefined);
-      const pose = r.winner === DRAW ? idlePose(this.frame) : won ? victoryPose(this.frame) : defeatPose(this.frame);
-      drawFigure(ctx, charId, color, cx - 90, 420, won ? 2.1 : 1.8, slot === 0 ? 1 : -1, pose, t, won || r.winner === DRAW ? 1 : 0.75);
-
-      const tx = cx + 10;
-      text(ctx, this.label(slot), tx, 190, { size: 18, bold: true, color: slotColor(slot) });
-      text(ctx, FIGHTERS[charId]!.name, tx, 228, { size: 30, bold: true, color: tint(color, 0.35), outline: true });
-      const lines = [
-        `Stocks left  ${r.stocksLeft[slot]}`,
-        `Falls  ${r.falls[slot]}`,
-        `Damage dealt  ${r.damageDealt[slot]}%`,
-      ];
-      lines.forEach((l, i) => text(ctx, l, tx, 280 + i * 32, { size: 18, color: '#f1e4c8' }));
-      if (won) text(ctx, '★ WINNER', tx, 400, { size: 20, bold: true, color: '#ffd166' });
-    });
+    if (r.chars.length <= 2) r.chars.forEach((charId, slot) => this.drawWide(ctx, charId, slot, t));
+    else r.chars.forEach((charId, slot) => this.drawNarrow(ctx, charId, slot, t));
 
     if (this.frame >= INPUT_DELAY) drawMenu(ctx, ITEMS, this.list.index, W / 2, 516, 320, 48);
+  }
+
+  private pose(slot: number) {
+    const r = this.result;
+    if (r.winner === DRAW) return idlePose(this.frame);
+    return slot === r.winner ? victoryPose(this.frame) : defeatPose(this.frame);
+  }
+
+  /** One of two side-by-side panels (1v1). */
+  private drawWide(ctx: CanvasRenderingContext2D, charId: number, slot: number, t: number): void {
+    const r = this.result;
+    const cx = slot === 0 ? 290 : 810;
+    const won = slot === r.winner;
+    const color = fighterColor(r.chars, slot);
+    panel(ctx, cx - 210, 140, 420, 360, won ? slotColor(slot) : undefined);
+    drawFigure(ctx, charId, color, cx - 90, 420, won ? 2.1 : 1.8, slot === 0 ? 1 : -1, this.pose(slot), t, won || r.winner === DRAW ? 1 : 0.75);
+
+    const tx = cx + 10;
+    text(ctx, this.label(slot), tx, 190, { size: 18, bold: true, color: slotColor(slot) });
+    text(ctx, FIGHTERS[charId]!.name, tx, 228, { size: 30, bold: true, color: tint(color, 0.35), outline: true });
+    this.statLines(slot).forEach((l, i) => text(ctx, l, tx, 276 + i * 30, { size: 18, color: '#f1e4c8' }));
+    if (won) text(ctx, '★ WINNER', tx, 420, { size: 20, bold: true, color: '#ffd166' });
+  }
+
+  /** One of three or four panels in a row, each with its finishing place. */
+  private drawNarrow(ctx: CanvasRenderingContext2D, charId: number, slot: number, t: number): void {
+    const r = this.result;
+    const n = r.chars.length;
+    const gap = 16;
+    const w = (W - 40 - (n - 1) * gap) / n;
+    const x = 20 + slot * (w + gap);
+    const won = slot === r.winner;
+    const color = fighterColor(r.chars, slot);
+    const place = r.places[slot]!;
+    panel(ctx, x, 140, w, 360, won ? slotColor(slot) : undefined);
+
+    text(ctx, PLACE_NAMES[place - 1]!, x + 16, 180, { size: 30, bold: true, color: PLACE_COLORS[place - 1], outline: true });
+    text(ctx, this.label(slot), x + w - 16, 176, { size: 17, bold: true, align: 'right', color: slotColor(slot) });
+    text(ctx, FIGHTERS[charId]!.name, x + w / 2, 214, { size: 24, bold: true, align: 'center', color: tint(color, 0.35), outline: true });
+    drawFigure(ctx, charId, color, x + w / 2, 368, won ? 1.45 : 1.25, slot % 2 === 0 ? 1 : -1, this.pose(slot), t, won || r.winner === DRAW ? 1 : 0.75);
+    this.statLines(slot).forEach((l, i) => text(ctx, l, x + w / 2, 400 + i * 23, { size: 15, align: 'center', color: '#f1e4c8' }));
+  }
+
+  private statLines(slot: number): string[] {
+    const r = this.result;
+    return [
+      `Stocks left  ${r.stocksLeft[slot]}`,
+      `Falls  ${r.falls[slot]}`,
+      `KOs  ${r.kos[slot]}`,
+      `Damage dealt  ${r.damageDealt[slot]}%`,
+    ];
   }
 }

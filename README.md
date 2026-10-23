@@ -2,17 +2,57 @@
 
 Browser platform fighter with (eventually) rollback netcode. See [SPEC.md](SPEC.md).
 
+**Play it:** https://vaprin32.github.io/smash/ (GitHub Pages; share that link).
+
 ```bash
 npm install
 npm run dev        # http://localhost:5173
 npm test           # Vitest
 npm run typecheck  # tsc --noEmit
-npm run build:html # dist/smash.html, a single file that runs from disk
+npm run build:html # dist/index.html, a single file that runs from disk
+npm run build      # regular Vite build into dist/app (needs a web server)
 ```
 
-Main menu → **Local Versus** (two players), **Training** (you against an idle CPU dummy) or
-**Netcode test** (two players, each on their own simulated machine; see below) →
-character select → 3-stock match → results (Rematch / Watch replay / Character select / Main menu).
+Main menu → **Local Versus** (two players), **Versus CPU** (you against 1 to 3 computer players),
+**Training** (you against an idle CPU dummy) or **Netcode test** (two players, each on their own
+simulated machine; see below) → character select → 3-stock match → results (Rematch / Watch replay /
+Character select / Main menu).
+
+## Publishing (GitHub Pages)
+
+`.github/workflows/pages.yml` runs on every push to `main`: it type-checks, runs the tests, builds
+`dist/index.html` and publishes it as the site's front page. The repository's Pages source is set
+to "GitHub Actions" (Settings → Pages). A run takes a minute or two; the Actions tab shows its
+progress, and a failed test stops the deploy, so the live game only ever changes to a tested build.
+
+## Versus CPU
+
+Pick how many opponents (1–3) and how well they play (Easy / Normal / Hard), then your fighter
+and each CPU's (they start on random fighters, so pressing Attack a few times is enough). With
+more than one CPU it's a free-for-all: everyone fights everyone, including the CPUs each other.
+The results rank players by how long they lasted and show KOs and damage dealt, both credited to
+whoever landed the hit (`lastHitBy` in the sim state, cleared once a fighter is back on their feet).
+
+A CPU is an ordinary input source (`src/ai/`): every frame it reads the match and returns the same
+kind of button bitmask a controller would, so replays record it like anyone else. It sees its
+opponents as they were a few frames ago (its reaction time) and tries every move it could start
+against a quick forward model of where everyone will be (`src/ai/predict.ts`: move data, impulses,
+friction, gravity, hitlag), picking one that would connect, preferring launch power as targets get
+closer to a KO and avoiding moves that would carry it off the stage. It also shields or dodges
+attacks it sees coming, grabs out of shield, mashes out of grabs, throws toward the nearer edge,
+waits at the edge for fighters who are off stage, and recovers with its jumps and specials.
+
+| Level | Reaction | Plays like |
+|---|---|---|
+| Easy | 24 frames | dawdles, attacks now and then, almost never blocks |
+| Normal | 13 frames | keeps up the pressure, blocks about a third of attacks |
+| Hard | 7 frames | picks the best move, blocks about half, punishes out of shield |
+
+Every number that differs between levels is in `src/ai/levels.ts`. `tests/cpu.test.ts` checks that
+every fighter's CPU recovers from all around the stage, beats an idle dummy at every level without
+falling off by itself, that Hard beats Normal and Normal beats Easy, that four CPUs play a
+free-for-all to the end (and it replays exactly), and that a CPU is deterministic and never
+touches the state it reads.
 
 ## Fighters
 
@@ -36,11 +76,11 @@ plus that fighter's hand-written specials. Looks (proportions, colors, costume) 
 
 ## Controls
 
-Menus and Training use the one-player layout. Local Versus splits the keyboard in half
+Menus, Versus CPU and Training use the one-player ("solo") layout. Local Versus splits the keyboard in half
 (no numpad needed), and P2's half is P1's mirrored around the middle of each row: movement on
 the outside, actions toward the middle. Keys are physical positions (Ñ is `;` on a US keyboard).
 
-| Action | Training (P1) | Versus P1 | Versus P2 | Gamepad |
+| Action | Solo (P1) | Versus P1 | Versus P2 | Gamepad |
 |---|---|---|---|---|
 | Move (up left down right) | W A S D | W A S D | O K L Ñ | left stick / d-pad |
 | Jump | L or Space | R | U | X / Y |

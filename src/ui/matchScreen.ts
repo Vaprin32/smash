@@ -3,6 +3,8 @@
 // state; the sim only ever sees one input bitmask per player per frame,
 // and every frame is recorded so the match can be watched again.
 
+import { CpuPlayer } from '../ai/cpu';
+import { CPU_LEVELS } from '../ai/levels';
 import { MATCH_ON, matchWinner } from '../sim/outcome';
 import { newReplay, recordStep, type Replay } from '../sim/replay';
 import { DEFAULT_STOCKS } from '../sim/rules';
@@ -12,7 +14,8 @@ import { beginLayout, drawMenu, panel, text, type View } from './draw';
 import { countDown, COUNTDOWN, drawBanner, END_TICKS, HeldGate } from './matchFlow';
 import { MatchView } from './matchView';
 import { MenuList } from './menuModel';
-import { matchResult, tallyDamage } from './results';
+import { playerLabels } from './players';
+import { matchResult, MatchStats } from './results';
 
 const PAUSE_ITEMS = ['Resume', 'Restart', 'Character select', 'Main menu'];
 
@@ -26,7 +29,9 @@ export class MatchScreen implements Screen {
   private paused = false;
   private pauseMenu = new MenuList(PAUSE_ITEMS.length);
   private gate: HeldGate;
-  private damageDealt = [0, 0];
+  private stats!: MatchStats;
+  /** Versus CPU: the computer players in slots 1, 2, ... */
+  private cpus: CpuPlayer[] = [];
 
   constructor(
     private app: App,
@@ -46,8 +51,16 @@ export class MatchScreen implements Screen {
     this.countdown = COUNTDOWN;
     this.sinceStart = 0;
     this.endTicks = -1;
-    this.damageDealt = [0, 0];
+    this.stats = new MatchStats(this.chars.length);
+    const level = CPU_LEVELS[this.app.cpu.level]!;
+    this.cpus = this.mode === 'cpu' ? this.chars.slice(1).map((_, i) => new CpuPlayer(i + 1, level, setup.seed)) : [];
     this.gate.block();
+  }
+
+  /** A human's held buttons, a CPU's decision, or nothing for the training dummy. */
+  private inputFor(slot: number): number {
+    if (slot === 0 || this.mode === 'versus') return this.gate.input(slot);
+    return this.cpus[slot - 1]?.think(this.state) ?? 0;
   }
 
   /** Make this match the one "Watch replay" shows, unless it never got past the countdown. */
@@ -84,12 +97,12 @@ export class MatchScreen implements Screen {
       return;
     }
 
-    const inputs = [this.gate.input(0), this.mode === 'training' ? 0 : this.gate.input(1)];
+    const inputs = this.chars.map((_, slot) => this.inputFor(slot));
     const prev = this.state;
     this.state = recordStep(this.replay!, prev, inputs);
     this.view.onStep(prev, this.state);
     this.sinceStart++;
-    tallyDamage(this.damageDealt, prev, this.state);
+    this.stats.onStep(prev, this.state);
     if (matchWinner(this.state) !== MATCH_ON) this.endTicks = 0;
   }
 
@@ -131,13 +144,13 @@ export class MatchScreen implements Screen {
 
   private finish(): void {
     this.keepReplay();
-    this.app.toResults(matchResult(this.mode, this.chars, this.state, this.damageDealt));
+    this.app.toResults(matchResult(this.mode, this.chars, this.state, this.stats));
   }
 
   draw(ctx: CanvasRenderingContext2D, view: View, dtMs: number): void {
     const training = this.mode === 'training';
     this.view.draw(ctx, view, dtMs, this.state, {
-      labels: training ? ['', 'CPU'] : [],
+      labels: playerLabels(this.mode, this.chars.length),
       hint: training ? 'Training · R reset · Esc pause · F1 debug' : 'Esc / Menu: pause · F1 debug',
     });
     drawBanner(ctx, view, { countdown: this.countdown, sinceStart: this.sinceStart, ended: this.endTicks >= 0 });

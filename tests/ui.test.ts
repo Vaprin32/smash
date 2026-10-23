@@ -8,6 +8,7 @@ import { ONE } from '../src/sim/fixed';
 import { Btn } from '../src/sim/input';
 import { MoveId } from '../src/sim/moves/types';
 import { CharSelectModel, MenuList } from '../src/ui/menuModel';
+import { playerLabels } from '../src/ui/players';
 
 const none: MenuPress = { up: false, down: false, left: false, right: false, confirm: false, back: false };
 const press = (p: Partial<MenuPress>): MenuPress => ({ ...none, ...p });
@@ -97,6 +98,36 @@ describe('character select (training)', () => {
   });
 });
 
+describe('character select (versus CPU)', () => {
+  it('player 1 picks their fighter, then each CPU in turn; Special undoes the last pick', () => {
+    const m = new CharSelectModel('cpu', 8, [0, 4, 5, 6]);
+    expect(m.activeCursor(0)).toBe(0);
+    m.update(both({ confirm: true }), false, false);
+    expect(m.activeCursor(0)).toBe(1);
+    m.update(both({}, { confirm: true }), false, false); // a second pad can't pick for the CPUs
+    expect(m.cursors[1]!.locked).toBe(false);
+    m.update(both({ right: true }), false, false);
+    m.update(both({ confirm: true }), false, false);
+    m.update(both({ confirm: true }), false, false);
+    expect(m.activeCursor(0)).toBe(3);
+    m.update(both({ back: true }), false, false);
+    expect(m.activeCursor(0)).toBe(2);
+    m.update(both({ confirm: true }), false, false);
+    m.update(both({ down: true }), false, false);
+    m.update(both({ confirm: true }), false, false);
+    expect(m.ready).toBe(true);
+    expect(m.update(both(), true, false)).toBe('start');
+    expect(m.cursors.map((c) => c.index)).toEqual([0, 5, 5, 2]);
+  });
+
+  it('labels players and CPUs', () => {
+    expect(playerLabels('cpu', 2)).toEqual(['P1', 'CPU']);
+    expect(playerLabels('cpu', 4)).toEqual(['P1', 'CPU 1', 'CPU 2', 'CPU 3']);
+    expect(playerLabels('training', 2)).toEqual(['P1', 'CPU']);
+    expect(playerLabels('versus', 2)).toEqual(['P1', 'P2']);
+  });
+});
+
 describe('gamepad mapping', () => {
   const pad = (pressed: number[], axes: number[] = [0, 0]): PadLike => ({
     buttons: Array.from({ length: 17 }, (_, i) => ({ pressed: pressed.includes(i) })),
@@ -147,6 +178,15 @@ describe('looks', () => {
     expect(fighterColor([3, 3], 0)).toBe(LOOKS[3]!.body);
     expect(fighterColor([3, 3], 1)).toBe(LOOKS[3]!.alt);
     expect(fighterColor([3, 4], 1)).toBe(LOOKS[4]!.body);
+  });
+
+  it('four of the same fighter wear four different colors', () => {
+    FIGHTERS.forEach((_def, i) => {
+      const colors = [0, 1, 2, 3].map((slot) => fighterColor([i, i, i, i], slot));
+      expect(new Set(colors).size).toBe(4);
+    });
+    // Copies are counted per fighter: the second Pip is still Pip's alternate.
+    expect(fighterColor([2, 5, 2, 5], 2)).toBe(LOOKS[2]!.alt);
   });
 
   it('fighters with a projectile have a projectile style', () => {

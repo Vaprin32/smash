@@ -7,6 +7,7 @@ import { ReplayPlayer } from '../sim/replay';
 import type { App, LastMatch, Screen } from './app';
 import { beginLayout, roundRect, text, type View } from './draw';
 import { MatchView } from './matchView';
+import { playerLabels } from './players';
 
 /** Playback speeds, in quarter frames per tick (¼×, ½×, 1×, 2×, 4×). */
 const SPEEDS = [1, 2, 4, 8, 16];
@@ -100,7 +101,7 @@ export class ReplayScreen implements Screen {
       dtMs,
       p.state,
       {
-        labels: this.match.mode === 'training' ? ['', 'CPU'] : [],
+        labels: playerLabels(this.match.mode, p.state.fighters.length),
         hint: 'Replay · J / Space pause · A / D speed, or step when paused · R restart · Esc back · F1 debug',
       },
       [`replay frame ${p.state.frame} / ${p.length}   speed ${SPEED_LABELS[this.speed]}   checksums ${desync}`],

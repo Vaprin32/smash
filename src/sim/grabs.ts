@@ -72,6 +72,7 @@ export function updateGrabs(s: MatchState): void {
       if (m.pummel && h.actionFrame >= m.pummel.frame) {
         h.hitMask |= bit;
         v.damage += m.pummel.damage;
+        v.lastHitBy = hi;
         h.hitlag = PUMMEL_HITLAG;
         v.hitlag = PUMMEL_HITLAG;
         v.event = SimEvent.Hit;
@@ -82,7 +83,7 @@ export function updateGrabs(s: MatchState): void {
         if (icos(m.throw.hit.angle) < 0) v.x = h.x - h.facing * holdDistance(h, v);
         h.grabTarget = -1;
         v.heldBy = -1;
-        applyHit(h, v, vi, m.throw.hit, h.facing, true);
+        applyHit(h, hi, v, vi, m.throw.hit, h.facing, true);
         return;
       }
     }

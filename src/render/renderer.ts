@@ -8,12 +8,12 @@ import { SHIELD_MAX } from '../sim/rules';
 import { animate } from './animations';
 import type { Camera } from './camera';
 import { LOOKS, type FighterLook } from './looks';
-import { drawRig, solveRig } from './skeleton';
+import { drawRig, hueShift, solveRig } from './skeleton';
 import { drawBackground, drawGroundShadow, drawStageArt, drawStageLights } from './scenery';
 import { SERIF, THEME } from './theme';
 
-/** Per player slot: name tags, cursors, shields. Fighters wear their own colors. */
-export const SLOT_COLORS = ['#d8453b', '#3f7fdc'];
+/** Per player slot (red, blue, gold, green): name tags, cursors, shields. Fighters wear their own colors. */
+export const SLOT_COLORS = ['#d8453b', '#3f7fdc', '#e2b23a', '#45a85a'];
 
 export function slotColor(slot: number): string {
   return SLOT_COLORS[slot % SLOT_COLORS.length]!;
@@ -23,13 +23,18 @@ export function lookOf(charId: number): FighterLook {
   return LOOKS[charId % LOOKS.length]!;
 }
 
-/** A fighter's outfit color; the alternate if an earlier slot picked the same fighter. */
+/**
+ * A fighter's outfit color. Each earlier slot with the same fighter moves this
+ * one along: body, alternate, then hue-shifted versions of both.
+ */
 export function fighterColor(chars: readonly number[], slot: number): string {
   const look = lookOf(chars[slot]!);
-  return chars.slice(0, slot).includes(chars[slot]!) ? look.alt : look.body;
+  const copy = chars.slice(0, slot).filter((c) => c === chars[slot]).length;
+  return [look.body, look.alt, hueShift(look.body, 140), hueShift(look.alt, 140)][copy % 4]!;
 }
 
-export function drawWorld(ctx: CanvasRenderingContext2D, state: MatchState, cam: Camera, w: number, h: number): void {
+/** `labels` replaces a fighter's "P1" overhead tag (e.g. "CPU 2"). */
+export function drawWorld(ctx: CanvasRenderingContext2D, state: MatchState, cam: Camera, w: number, h: number, labels: readonly string[] = []): void {
   const t = performance.now();
   const stage = STAGES[state.stageId]!;
   drawBackground(ctx, cam, w, h, t);
@@ -40,12 +45,12 @@ export function drawWorld(ctx: CanvasRenderingContext2D, state: MatchState, cam:
     drawGroundShadow(ctx, stage, f.x / ONE, f.y / ONE, FIGHTERS[f.charId]!.stats.width / ONE + 16);
   }
   const chars = state.fighters.map((f) => f.charId);
-  state.fighters.forEach((f, i) => drawFighter(ctx, state, f, i, fighterColor(chars, i)));
+  state.fighters.forEach((f, i) => drawFighter(ctx, state, f, i, fighterColor(chars, i), labels[i] || `P${i + 1}`));
   state.fighters.forEach((f, i) => drawProjectile(ctx, f, fighterColor(chars, i)));
   drawStageLights(ctx, stage, t);
 }
 
-function drawFighter(ctx: CanvasRenderingContext2D, state: MatchState, f: FighterState, slot: number, color: string): void {
+function drawFighter(ctx: CanvasRenderingContext2D, state: MatchState, f: FighterState, slot: number, color: string, label: string): void {
   if (f.action === Action.KO || f.action === Action.Out) return;
   const st = FIGHTERS[f.charId]!.stats;
   const look = lookOf(f.charId);
@@ -106,9 +111,9 @@ function drawFighter(ctx: CanvasRenderingContext2D, state: MatchState, f: Fighte
   ctx.textAlign = 'center';
   ctx.lineWidth = 3;
   ctx.strokeStyle = '#11131f';
-  ctx.strokeText(`P${slot + 1}`, x, ty);
+  ctx.strokeText(label, x, ty);
   ctx.fillStyle = tag;
-  ctx.fillText(`P${slot + 1}`, x, ty);
+  ctx.fillText(label, x, ty);
   ctx.beginPath();
   ctx.moveTo(x - 5, ty + 4);
   ctx.lineTo(x + 5, ty + 4);
