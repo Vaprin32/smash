@@ -182,6 +182,23 @@ describe('movement', () => {
     expect(n.fighters[0]!.ground).toBe(0);
   });
 
+  it('falling onto a platform while holding down passes through it; without down it lands', () => {
+    const p = stage.platforms[0]!;
+    const above = () => {
+      const s = newMatch();
+      const f = s.fighters[0]!;
+      f.x = (p.left + p.right) >> 1;
+      f.y = p.top - px(80);
+      f.ground = -1;
+      f.action = Action.Air;
+      return s;
+    };
+    const landed = run(above(), 40, 0);
+    expect(landed.fighters[0]!.ground).toBe(platformGroundIndex(stage, 0));
+    const through = run(above(), 40, Btn.Down);
+    expect(through.fighters[0]!.ground).toBe(0); // on the main stage below
+  });
+
   it('jumps up through a platform and lands on top of it', () => {
     const s = newMatch();
     const p = stage.platforms[0]!;

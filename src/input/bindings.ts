@@ -18,7 +18,7 @@ export interface PlayerKeys {
 
 export type PadButtons = Record<Exclude<keyof PlayerKeys, 'left' | 'right' | 'up' | 'down'>, number[]>;
 
-/** 'solo': menus and training (player 1 has the whole keyboard). 'versus': local versus. */
+/** 'solo': everything but the netcode test (player 1 has the whole keyboard). 'versus': the netcode test's two players. */
 export type LayoutName = 'solo' | 'versus';
 
 const NO_KEYS: PlayerKeys = { left: [], right: [], up: [], down: [], jump: [], attack: [], heavy: [], special: [], dodge: [], dash: [] };

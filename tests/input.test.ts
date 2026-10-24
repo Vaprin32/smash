@@ -79,7 +79,7 @@ describe('keyboard layouts', () => {
   it('a key held across a layout switch is not a fresh press', () => {
     const { keyboard, down, up } = fakeKeyboard();
     const controls = new Controls(keyboard);
-    down('KeyJ'); // chooses "Local Versus" in the solo layout
+    down('KeyJ'); // chooses "Netcode test" in the solo layout
     controls.poll();
     expect(controls.pressed(0) & Btn.Attack).toBeTruthy();
     controls.setLayout('versus');

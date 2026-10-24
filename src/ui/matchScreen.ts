@@ -59,7 +59,7 @@ export class MatchScreen implements Screen {
 
   /** A human's held buttons, a CPU's decision, or nothing for the training dummy. */
   private inputFor(slot: number): number {
-    if (slot === 0 || this.mode === 'versus') return this.gate.input(slot);
+    if (slot === 0) return this.gate.input(slot);
     return this.cpus[slot - 1]?.think(this.state) ?? 0;
   }
 

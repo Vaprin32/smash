@@ -62,6 +62,8 @@ const moves: Record<number, MoveDef> = {
     hitboxes: [
       hitbox({ frames: [9, 12], x: 2, y: -72, r: 26, damage: 14, kb: 6, growth: 14, angle: 88 }),
       hitbox({ frames: [9, 12], x: 2, y: -40, r: 20, damage: 10, kb: 4.5, growth: 9, angle: 85 }),
+      // A pillar straight up through the platform overhead (115 px above the stage), same height for everyone.
+      hitbox({ frames: [9, 12], x: 0, y: -126, r: 24, damage: 11, kb: 6, growth: 12, angle: 90, fixed: true }),
     ],
   },
   [MoveId.DSmash]: {

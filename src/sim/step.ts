@@ -109,7 +109,7 @@ function updateFighter(f: FighterState, slot: number, input: number, stage: Stag
     }
   }
 
-  moveFighter(f, def, stage);
+  moveFighter(f, def, stage, input);
   if (f.ground >= 0 && isStanding(f.action)) f.lastHitBy = -1;
 
   if (outsideBlastZone(f, stage)) {

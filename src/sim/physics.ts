@@ -3,11 +3,13 @@
 
 import { Action, isGroundFree, setAction } from './actions';
 import type { FighterDef } from './fighters/types';
+import { Btn } from './input';
 import { KNOCKDOWN_HITSTUN } from './rules';
 import { surfaceOf, type Block, type StageDef } from './stage';
 import type { FighterState } from './state';
 
-export function moveFighter(f: FighterState, def: FighterDef, stage: StageDef): void {
+/** `input` is the fighter's held buttons: holding down while falling passes through platforms. */
+export function moveFighter(f: FighterState, def: FighterDef, stage: StageDef, input: number): void {
   const st = def.stats;
   const hw = st.width >> 1;
 
@@ -57,7 +59,7 @@ export function moveFighter(f: FighterState, def: FighterDef, stage: StageDef): 
     }
   }
 
-  if (f.vy < 0 || f.dropTimer > 0) return;
+  if (f.vy < 0 || f.dropTimer > 0 || fallsThrough(f, input)) return;
   const nb = stage.blocks.length;
   for (let i = 0; i < stage.platforms.length; i++) {
     const p = stage.platforms[i]!;
@@ -66,6 +68,11 @@ export function moveFighter(f: FighterState, def: FighterDef, stage: StageDef): 
       return;
     }
   }
+}
+
+/** Holding down while falling skips pass-through platforms (not while launched in hitstun). */
+function fallsThrough(f: FighterState, input: number): boolean {
+  return (input & Btn.Down) !== 0 && f.action !== Action.Hitstun;
 }
 
 export function outsideBlastZone(f: FighterState, stage: StageDef): boolean {

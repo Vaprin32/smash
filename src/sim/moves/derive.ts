@@ -33,9 +33,9 @@ function scaleMove(m: MoveDef, t: MoveTuning): MoveDef {
   const reachX = (t.size * t.reach) / 100;
   const strength = (h: HitboxDef): HitboxDef => ({
     ...h,
-    x: pct(h.x, reachX),
-    y: pct(h.y, t.size),
-    r: pct(h.r, t.size),
+    x: h.fixed ? h.x : pct(h.x, reachX),
+    y: h.fixed ? h.y : pct(h.y, t.size),
+    r: h.fixed ? h.r : pct(h.r, t.size),
     damage: Math.max(1, pct(h.damage, t.damage)),
     baseKb: pct(h.baseKb, t.knockback),
     kbGrowth: pct(h.kbGrowth, t.knockback),

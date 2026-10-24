@@ -52,6 +52,8 @@ export interface HitboxDef {
   kbGrowth: number;
   /** Launch angle in degrees relative to the attacker's facing: 0 = forward, 90 = up, 180 = backward, 270 = down. */
   angle: number;
+  /** Position and radius stay as written for every fighter (not scaled by size), e.g. to reach the platform above. */
+  fixed?: boolean;
 }
 
 /** Sets velocity on a given move frame. Unset fields leave velocity unchanged. */
@@ -128,8 +130,9 @@ export function hitbox(h: {
   kb: number;
   growth: number;
   angle: number;
+  fixed?: boolean;
 }): HitboxDef {
-  return {
+  const out: HitboxDef = {
     start: h.frames[0],
     end: h.frames[1],
     x: px(h.x),
@@ -140,6 +143,8 @@ export function hitbox(h: {
     kbGrowth: px(h.growth),
     angle: h.angle,
   };
+  if (h.fixed) out.fixed = true;
+  return out;
 }
 
 /** Knockback-only hit (throws, projectiles) in pixel units. */

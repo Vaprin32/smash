@@ -22,12 +22,12 @@ import { ReplayScreen } from './replayScreen';
 import { ResultsScreen, type MatchResult } from './results';
 
 /**
- * Local versus (two players), versus CPU (player 1 against 1-3 computer
- * players, everyone for themselves), training (player 1 against an idle CPU
- * dummy), the netcode test (two players, each on their own simulated machine),
- * or online (1v1 against another browser, over WebRTC).
+ * Versus CPU (player 1 against 1-3 computer players, everyone for
+ * themselves), training (player 1 against an idle CPU dummy), the netcode test
+ * (two players, each on their own simulated machine), or online (1v1 against
+ * another browser, over WebRTC).
  */
-export type Mode = 'versus' | 'cpu' | 'training' | 'netTest' | 'online';
+export type Mode = 'cpu' | 'training' | 'netTest' | 'online';
 
 /** Versus CPU settings, kept for the session. */
 export interface CpuSettings {
@@ -154,7 +154,7 @@ export class App {
   }
 }
 
-/** Two-player modes split the keyboard; everything else gives P1 all of it. */
+/** The netcode test's two players split the keyboard; everything else gives P1 all of it. */
 function layoutFor(mode: Mode): LayoutName {
-  return mode === 'training' || mode === 'cpu' || mode === 'online' ? 'solo' : 'versus';
+  return mode === 'netTest' ? 'versus' : 'solo';
 }

@@ -43,7 +43,7 @@ export class Controls {
 
   /**
    * Switch keyboard layouts. Keys held across the switch don't count as fresh
-   * presses (the J that chose "Local Versus" is P2's left in the versus layout).
+   * presses (the J that chose "Netcode test" is P2's left in the versus layout).
    */
   setLayout(name: LayoutName): void {
     this.keyboard.setLayout(name);

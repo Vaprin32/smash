@@ -43,6 +43,7 @@ Everything rollback, replays and the CPU rely on comes from these rules. Break t
 ### Fighters and moves as data
 
 - `fighters/<name>.ts` holds stats (weight, speeds, gravity, air jumps, hurtbox). `moves/<name>.ts` holds that fighter's moveset.
+- A hitbox with `fixed: true` keeps its pixel position and radius for every fighter (not size-scaled). Up smash's top "pillar" uses this so every fighter hits someone on the platform 115 px above.
 - Wisp's moveset (`moves/wisp.ts`) is the template. Every other fighter calls `deriveMoves(WISP_MOVES, tuning, ownMoves)` (`moves/derive.ts`): a single `MoveTuning` line (percent frames / size / reach / damage / knockback) rescales every template move, then the fighter's hand-written signature moves (usually the specials) replace template slots. Retune a fighter there, not move by move.
 - Move data drives the animation too: `render/animations.ts` keyframes poses from each move's hitbox windows, so changing frame data keeps the visuals in sync.
 - Looks (proportions, colors, costume, title) live in `render/looks.ts`, the rig in `render/skeleton.ts`. Render code may use floats and `Math.sin`.
@@ -50,7 +51,7 @@ Everything rollback, replays and the CPU rely on comes from these rules. Break t
 ### Outside the sim
 
 - `main.ts` runs the fixed-timestep loop: a rAF accumulator, at most 5 sim ticks per displayed frame, `controls.poll()` before every tick.
-- `ui/app.ts` is the screen manager (`Screen` with `tick()` / `draw()` / optional `leave()`). Modes are `'versus' | 'cpu' | 'training' | 'netTest' | 'online'`. A new screen is constructed before `go()` calls the old one's `leave()`, so state the next screen reads (e.g. `lastMatch` for the main menu's "Watch replay") must be set before navigating. `ui/matchView.ts` draws a match (world, effects, camera, HUD, F1 debug overlay) and is shared by live matches, replays and the netcode test. The camera is render-only, never sim state.
+- `ui/app.ts` is the screen manager (`Screen` with `tick()` / `draw()` / optional `leave()`). Modes are `'cpu' | 'training' | 'netTest' | 'online'` (Local Versus was removed at the user's request; the split-keyboard `versus` layout remains for the netcode test). A new screen is constructed before `go()` calls the old one's `leave()`, so state the next screen reads (e.g. `lastMatch` for the main menu's "Watch replay") must be set before navigating. `ui/matchView.ts` draws a match (world, effects, camera, HUD, F1 debug overlay) and is shared by live matches, replays and the netcode test. The camera is render-only, never sim state.
 - `input/bindings.ts` holds every keyboard layout (solo, versus P1/P2) and the gamepad mapping. Keys are physical `e.code` positions. `Keyboard` resolves left+right (and up+down) to the last-pressed key, and ignores key events from editable `<input>`s.
 - **CPU players (`src/ai/`) are just input sources.** `CpuPlayer` reads the `MatchState` (opponents delayed by its reaction frames) and returns a `Btn` bitmask, so replays record CPUs like humans. It must never mutate the state it reads. Its randomness is its own seeded xorshift. `predict.ts` is a cheap forward model of moves and physics, and all per-level numbers are in `levels.ts`.
 - Replays (`sim/replay.ts`) are setup + per-frame inputs + a `hashState` every 60 frames, and are JSON-safe.

@@ -66,7 +66,7 @@ export class ControlsScreen implements Screen {
     });
 
     const notes = [
-      'Local Versus and the Netcode test split the keyboard in half (no numpad needed); menus and Training use the Training column.',
+      'The Netcode test splits the keyboard in half (the Versus columns, no numpad needed); everything else uses the Solo column.',
       'Menus: directions to move, Attack / Jump / Enter to choose, Special / Esc to go back.',
       'In a match: Esc or Menu pauses · F1 shows hitboxes · R resets in Training · View on a pad switches player on character select.',
     ];

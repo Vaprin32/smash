@@ -15,7 +15,7 @@ npm run build:html # dist/index.html, a single file that runs from disk
 npm run build      # regular Vite build into dist/app (needs a web server)
 ```
 
-Main menu → **Local Versus** (two players), **Versus CPU** (you against 1 to 3 computer players),
+Main menu → **Versus CPU** (you against 1 to 3 computer players),
 **Create / Join Online Room** (1v1 against another browser), **Training** (you against an idle
 CPU dummy) or **Netcode test** (two players, each on their own simulated machine; see below) →
 character select → 3-stock match → results (Rematch / Watch replay / Character select / Main menu).
@@ -83,8 +83,8 @@ plus that fighter's hand-written specials. Looks (proportions, colors, costume) 
 
 ## Controls
 
-Menus, Versus CPU and Training use the one-player ("solo") layout. Local Versus splits the keyboard in half
-(no numpad needed), and P2's half is P1's mirrored around the middle of each row: movement on
+Everything except the netcode test uses the one-player ("solo") layout. The netcode test splits the keyboard
+in half (no numpad needed), and P2's half is P1's mirrored around the middle of each row: movement on
 the outside, actions toward the middle. Keys are physical positions (Ñ is `;` on a US keyboard).
 Holding left and right together (or up and down) counts as whichever was pressed last, so rolling
 from one key to the other never stops you in between.
@@ -100,7 +100,10 @@ from one key to the other never stops you in between.
 | Dash | N | B | N | LB |
 
 Attack: jab combo, tilts, dash attack on the ground; aerials in the air. Smash: forward / up / down
-smash (hold to charge). Special + direction: neutral / side / up (recovery) / down special.
+smash (hold to charge); up smash also reaches straight up through the platform overhead, so it hits
+someone standing on it. Special + direction: neutral / side / up (recovery) / down special.
+Down on a platform drops through it, and holding down while falling passes through platforms
+instead of landing on them.
 Shield + direction rolls or spot dodges, shield + attack grabs; while holding, attack pummels
 and a direction throws.
 

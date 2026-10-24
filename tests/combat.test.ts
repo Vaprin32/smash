@@ -14,6 +14,7 @@ import {
   SHIELD_DROP_FRAMES,
   SHIELD_MAX,
 } from '../src/sim/rules';
+import { platformGroundIndex, STAGES } from '../src/sim/stage';
 import { createMatch, FIGHTER_FIELDS, type MatchState } from '../src/sim/state';
 import { step } from '../src/sim/step';
 import { icos, isin, TRIG_ONE } from '../src/sim/trig';
@@ -67,7 +68,7 @@ describe('move data', () => {
           expect(h.start).toBeGreaterThanOrEqual(1);
           expect(h.end).toBeGreaterThanOrEqual(h.start);
           expect(h.end).toBeLessThanOrEqual(m.total);
-          for (const v of Object.values(h)) expect(Number.isInteger(v)).toBe(true);
+          for (const [k, v] of Object.entries(h)) if (k !== 'fixed') expect(Number.isInteger(v), k).toBe(true);
         }
       }
     }
@@ -146,6 +147,28 @@ describe('hitting the dummy', () => {
       if (n.fighters[1]!.action === Action.Hitstun && n.fighters[1]!.vy > 0) spiked = true;
     });
     expect(spiked).toBe(true);
+  });
+
+  it('every fighter\'s up smash hits someone standing on the platform right above', () => {
+    const stage = STAGES[0]!;
+    const p = stage.platforms[1]!;
+    const x = (p.left + p.right) >> 1;
+    FIGHTERS.forEach((def, c) => {
+      for (const victim of [2, 5]) {
+        // Pip (smallest) and Basalt (biggest) standing on the platform.
+        const s = createMatch({ seed: 1, stageId: 0, chars: [c, victim], stocks: 3 });
+        const [a, b] = s.fighters as [MatchState['fighters'][0], MatchState['fighters'][0]];
+        a.x = x;
+        b.x = x;
+        b.y = p.top;
+        b.ground = platformGroundIndex(stage, 1);
+        let hit = false;
+        run(s, 30, (i) => (i === 0 ? Btn.Up | Btn.Heavy : 0), 0, (n) => {
+          if (n.fighters[1]!.action === Action.Hitstun) hit = true;
+        });
+        expect(hit, `${def.name} up smash vs ${FIGHTERS[victim]!.name} on the platform`).toBe(true);
+      }
+    });
   });
 
   it('simultaneous hits trade', () => {
@@ -286,7 +309,7 @@ describe('specials and aerials', () => {
 describe('combat determinism', () => {
   it('random two-player brawls replay identically with integer state', () => {
     const play = () => {
-      let rng = 0x2468ace;
+      let rng = 99;
       let s = createMatch({ seed: 5, stageId: 0, chars: [0, 0], stocks: 3 });
       s.fighters[1]!.x = px(-100);
       let a = 0, b = 0;

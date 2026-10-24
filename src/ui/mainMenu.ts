@@ -20,7 +20,6 @@ export class MainMenu implements Screen {
     select?: string,
   ) {
     this.items = [
-      'Local Versus',
       'Versus CPU',
       'Create Online Room',
       'Join Online Room',
@@ -41,9 +40,6 @@ export class MainMenu implements Screen {
     if (event !== 'choose') return;
     this.app.sfx.select();
     switch (this.items[this.list.index]) {
-      case 'Local Versus':
-        this.app.toCharSelect('versus');
-        break;
       case 'Versus CPU':
         this.app.toCpuSetup();
         break;
@@ -73,7 +69,7 @@ export class MainMenu implements Screen {
     const area = beginLayout(ctx, view, W, H);
 
     text(ctx, 'SMASH PROTOTYPE', W / 2, 130, { size: 64, bold: true, align: 'center', color: '#ffd166', outline: true });
-    text(ctx, 'Eight champions of the realm · local and online versus · rollback netcode', W / 2, 168, { size: 18, align: 'center', color: '#d9c49a' });
+    text(ctx, 'Eight champions of the realm · versus CPU or online · rollback netcode', W / 2, 168, { size: 18, align: 'center', color: '#d9c49a' });
     // Rows shrink to stay clear of the roster's floor.
     drawMenu(ctx, this.items, this.list.index, W / 2, 196, 340, Math.min(54, Math.floor(400 / this.items.length)));
 

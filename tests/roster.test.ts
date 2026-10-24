@@ -107,7 +107,7 @@ describe('move data is valid for every fighter', () => {
           expect(h.end, where).toBeLessThanOrEqual(m.total);
           expect(h.r, where).toBeGreaterThan(0);
           expect(h.damage, where).toBeGreaterThan(0);
-          for (const v of Object.values(h)) expect(Number.isInteger(v), where).toBe(true);
+          for (const [k, v] of Object.entries(h)) if (k !== 'fixed') expect(Number.isInteger(v), `${where} ${k}`).toBe(true);
         }
         if (m.chargeFrame !== undefined) {
           expect(m.chargeFrame, where).toBeLessThan(Math.min(...m.hitboxes.map((h) => h.start)));

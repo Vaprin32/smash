@@ -29,7 +29,7 @@ describe('menu list', () => {
 
 describe('character select (versus)', () => {
   it('each player moves and locks their own cursor, then anyone starts', () => {
-    const m = new CharSelectModel('versus', 8, [0, 1]);
+    const m = new CharSelectModel('netTest', 8, [0, 1]);
     m.update(both({ right: true }, { left: true }), false, false);
     expect(m.cursors.map((c) => c.index)).toEqual([1, 0]);
     expect(m.update(both({ confirm: true }), false, false)).toBe('lock');
@@ -43,7 +43,7 @@ describe('character select (versus)', () => {
   });
 
   it('wraps within a row and between rows', () => {
-    const m = new CharSelectModel('versus', 8, [0, 7]);
+    const m = new CharSelectModel('netTest', 8, [0, 7]);
     m.update(both({ left: true }, { right: true }), false, false);
     expect(m.cursors.map((c) => c.index)).toEqual([3, 4]);
     m.update(both({ down: true }, { up: true }), false, false);
@@ -51,7 +51,7 @@ describe('character select (versus)', () => {
   });
 
   it('special undoes a lock, then leaves', () => {
-    const m = new CharSelectModel('versus', 8, [0, 1]);
+    const m = new CharSelectModel('netTest', 8, [0, 1]);
     m.update(both({ confirm: true }), false, false);
     expect(m.update(both({ back: true }), false, false)).toBe('unlock');
     expect(m.cursors[0]!.locked).toBe(false);
@@ -60,7 +60,7 @@ describe('character select (versus)', () => {
   });
 
   it('mirror matches are allowed', () => {
-    const m = new CharSelectModel('versus', 8, [5, 5]);
+    const m = new CharSelectModel('netTest', 8, [5, 5]);
     m.update(both({ confirm: true }, { confirm: true }), false, false);
     expect(m.ready).toBe(true);
   });
@@ -124,7 +124,7 @@ describe('character select (versus CPU)', () => {
     expect(playerLabels('cpu', 2)).toEqual(['P1', 'CPU']);
     expect(playerLabels('cpu', 4)).toEqual(['P1', 'CPU 1', 'CPU 2', 'CPU 3']);
     expect(playerLabels('training', 2)).toEqual(['P1', 'CPU']);
-    expect(playerLabels('versus', 2)).toEqual(['P1', 'P2']);
+    expect(playerLabels('netTest', 2)).toEqual(['P1', 'P2']);
   });
 });
 
