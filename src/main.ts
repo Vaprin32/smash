@@ -2,6 +2,7 @@ import { Sfx } from './audio/sfx';
 import { Controls } from './input/controls';
 import { Keyboard } from './input/keyboard';
 import { loadKeyboardLayout } from './input/keyLabels';
+import { loadRemap } from './input/remap';
 import { takeRoomFromUrl } from './net/config';
 import { App } from './ui/app';
 import type { View } from './ui/draw';
@@ -11,6 +12,7 @@ const MAX_STEPS_PER_TICK = 5;
 
 const canvas = document.getElementById('game') as HTMLCanvasElement;
 const ctx = canvas.getContext('2d')!;
+loadRemap(); // the player's own key and button choices, if they made any
 const keyboard = new Keyboard(window);
 const sfx = new Sfx();
 const app = new App(new Controls(keyboard), sfx);

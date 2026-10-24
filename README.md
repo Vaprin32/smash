@@ -136,7 +136,13 @@ Gamepads are assigned in the order they connect (first pad = P1, second = P2); e
 keyboard keys keep working too. On character select, a pad's View/Back button moves it to the
 other player.
 
-All bindings (both keyboard layouts and the gamepad) live in `src/input/bindings.ts`.
+**Rebinding:** the Controls screen (main menu) lists every action's key and pad button. Pick a cell,
+press Attack or Enter, then press the new key or button. If another action had it, the two swap.
+Choices are saved in the browser, and "Reset to defaults" undoes them. Enter, Esc and F1, and the
+pad's Menu and View buttons, keep their jobs. The netcode test's split keyboard isn't remappable.
+
+The defaults (both keyboard layouts and the gamepad) live in `src/input/bindings.ts`; rebinding is
+`src/input/remap.ts`.
 
 ## Replays and determinism
 

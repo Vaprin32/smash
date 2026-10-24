@@ -77,7 +77,9 @@ export class Controls {
     }
     this.confirmKey = this.keyboard.wasPressed(BINDINGS.menu.confirm);
     this.backKey = this.keyboard.wasPressed(BINDINGS.menu.back);
-    this.resetKey = this.keyboard.wasPressed(BINDINGS.reset);
+    // Training's reset key, unless it has been bound to an action.
+    const resetBound = Object.values(BINDINGS.layouts.solo[0]!).some((codes) => codes.includes(BINDINGS.reset));
+    this.resetKey = !resetBound && this.keyboard.wasPressed(BINDINGS.reset);
     this.keyboard.endFrame();
   }
 

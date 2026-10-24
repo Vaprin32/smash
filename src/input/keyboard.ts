@@ -14,6 +14,12 @@ const BUTTON_FOR: [keyof PlayerKeys, number][] = [
   ['dash', Btn.Dash],
 ];
 
+/** A key the game uses (looked up live, since bindings can be changed). */
+function isBound(code: string): boolean {
+  if (code === BINDINGS.toggleDebug) return true;
+  return Object.values(BINDINGS.layouts).some((layout) => layout.some((p) => Object.values(p).some((codes) => codes.includes(code))));
+}
+
 function isTextField(target: EventTarget | null): boolean {
   return typeof HTMLInputElement !== 'undefined' && target instanceof HTMLInputElement && !target.readOnly;
 }
@@ -30,18 +36,21 @@ export class Keyboard {
   private presses = 0;
   private tapped = new Set<string>();
   private handlers = new Map<string, () => void>();
-  private bound = new Set<string>();
   private layout: readonly PlayerKeys[] = BINDINGS.layouts.solo;
+  /** Set by `captureNext`: the next key press goes here instead of to the game. */
+  private capture: ((code: string) => void) | null = null;
 
   constructor(target: Window) {
-    for (const layout of Object.values(BINDINGS.layouts)) {
-      for (const p of layout) for (const codes of Object.values(p)) for (const c of codes) this.bound.add(c);
-    }
-    this.bound.add(BINDINGS.toggleDebug);
-
     target.addEventListener('keydown', (e) => {
       if (isTextField(e.target)) return; // typing a room code, not playing
-      if (this.bound.has(e.code)) e.preventDefault();
+      if (this.capture && !e.repeat) {
+        e.preventDefault();
+        const cb = this.capture;
+        this.capture = null;
+        cb(e.code);
+        return;
+      }
+      if (isBound(e.code)) e.preventDefault();
       if (e.repeat) return;
       this.down.set(e.code, ++this.presses);
       this.tapped.add(e.code);
@@ -54,6 +63,11 @@ export class Keyboard {
       this.down.clear();
       this.tapped.clear();
     });
+  }
+
+  /** The next key pressed (anywhere) is handed to `fn` and not seen by the game (rebinding controls). */
+  captureNext(fn: ((code: string) => void) | null): void {
+    this.capture = fn;
   }
 
   /** Call `fn` when `code` is pressed (for non-game keys like F1). */
