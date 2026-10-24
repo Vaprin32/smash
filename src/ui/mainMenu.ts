@@ -24,7 +24,6 @@ export class MainMenu implements Screen {
       'Create Online Room',
       'Join Online Room',
       'Training',
-      'Netcode test',
       ...(app.lastMatch ? ['Watch replay'] : []),
       'Graphics',
       'Controls',
@@ -52,9 +51,6 @@ export class MainMenu implements Screen {
         break;
       case 'Training':
         this.app.toCharSelect('training');
-        break;
-      case 'Netcode test':
-        this.app.toCharSelect('netTest');
         break;
       case 'Watch replay':
         this.app.watchReplay(() => this.app.toMainMenu('Watch replay'));

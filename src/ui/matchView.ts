@@ -1,5 +1,5 @@
 // Draws a match: world, hit effects, camera, HUD and the F1 debug overlay.
-// Shared by live matches, replays and the netcode test. It only ever reads
+// Shared by live matches, online matches and replays. It only ever reads
 // sim state.
 
 import type { Sfx } from '../audio/sfx';

@@ -16,8 +16,8 @@ npm run build      # regular Vite build into dist/app (needs a web server)
 ```
 
 Main menu → **Versus CPU** (you against 1 to 3 computer players),
-**Create / Join Online Room** (1v1 against another browser), **Training** (you against an idle
-CPU dummy) or **Netcode test** (two players, each on their own simulated machine; see below) →
+**Create / Join Online Room** (1v1 against another browser), or **Training** (you against an idle
+CPU dummy) →
 character select → 3-stock match → results (Rematch / Watch replay / Character select / Main menu).
 
 ## Publishing (GitHub Pages)
@@ -115,21 +115,19 @@ aerials and throws, plus that fighter's hand-written smash attacks and specials.
 
 ## Controls
 
-Everything except the netcode test uses the one-player ("solo") layout. The netcode test splits the keyboard
-in half (no numpad needed), and P2's half is P1's mirrored around the middle of each row: movement on
-the outside, actions toward the middle. Keys are physical positions (Ñ is `;` on a US keyboard).
+The keyboard is player 1's; keys are physical positions, so they sit in the same place on any keyboard layout.
 Holding left and right together (or up and down) counts as whichever was pressed last, so rolling
 from one key to the other never stops you in between.
 
-| Action | Solo (P1) | Versus P1 | Versus P2 | Gamepad |
-|---|---|---|---|---|
-| Move (up left down right) | W A S D | W A S D | O K L Ñ | left stick / d-pad |
-| Jump | L or Space | R | U | X / Y |
-| Attack | J | F | J | A |
-| Smash (ground only) | K | T | Y | RB |
-| Special | I | G | H | B |
-| Shield / roll / dodge / grab | E | E | I | LT / RT |
-| Dash | N | B | N | LB |
+| Action | Keyboard | Gamepad |
+|---|---|---|
+| Move (up left down right) | W A S D | left stick / d-pad |
+| Jump | L or Space | X / Y |
+| Attack | J | A |
+| Smash (ground only) | K | RB |
+| Special | I | B |
+| Shield / roll / dodge / grab | E | LT / RT |
+| Dash | N | LB |
 
 Attack: jab combo, tilts, dash attack on the ground; aerials in the air. Smash: forward / up / down
 smash (hold to charge); up smash also reaches straight up through the platform overhead, so it hits
@@ -151,15 +149,15 @@ Menus: directions to move, Attack / Jump / Enter to choose, Special / Esc to go 
 In a match: Esc or the pad's Menu button pauses, F1 toggles the debug overlay, R resets (Training).
 
 Gamepads are assigned in the order they connect (first pad = P1, second = P2); each player's
-keyboard keys keep working too. On character select, a pad's View/Back button moves it to the
+keyboard keeps working too. On character select, a pad's View/Back button moves it to the
 other player.
 
 **Rebinding:** the Controls screen (main menu) lists every action's key and pad button. Pick a cell,
 press Attack or Enter, then press the new key or button. If another action had it, the two swap.
 Choices are saved in the browser, and "Reset to defaults" undoes them. Enter, Esc and F1, and the
-pad's Menu and View buttons, keep their jobs. The netcode test's split keyboard isn't remappable.
+pad's Menu and View buttons, keep their jobs.
 
-The defaults (both keyboard layouts and the gamepad) live in `src/input/bindings.ts`; rebinding is
+The defaults (keyboard and gamepad) live in `src/input/bindings.ts`; rebinding is
 `src/input/remap.ts`.
 
 ## Replays and determinism
@@ -186,7 +184,7 @@ identical, saving at frame N and re-simulating from a clone or from serialized b
 the original (including after a mispredicted branch, as rollback will do), `step()` never
 mutates its input, and the state only ever holds int32 integers.
 
-## Rollback netcode and the netcode test
+## Rollback netcode
 
 Online play uses our own small rollback session (`src/net/session.ts`, GGPO-style). Each tick a
 peer schedules its local input `inputDelay` frames ahead (2 by default, 0–4), simulates the next
@@ -206,27 +204,7 @@ Confirmed frames also go into a normal replay, so a networked match can be watch
 | `src/net/sync.ts` | frame advantage and time sync |
 | `src/net/desync.ts` | checksum comparison and state dumps |
 | `src/net/protocol.ts` | binary packet format |
-| `src/net/transports/` | `Transport` interface, `LoopbackTransport` (tests), `FakeNetwork` (latency, jitter, loss) |
-
-**Netcode test** (main menu) runs one match as two sessions side by side: the left half is P1's
-machine, the right half P2's, linked by a fake network. P1's versus keys (and pad 1) play on the
-left, P2's (and pad 2) on the right. The bar on top sets:
-
-- **Latency**: one-way delay per packet, 0–200 ms (the ping shown is about twice this)
-- **Jitter**: up to this much extra random delay per packet, so packets also arrive out of order
-- **Loss**: share of packets dropped, 0–20%
-- **Input delay**: frames between pressing a button and it taking effect, on both machines
-
-It starts at 100 ms, 10 ms jitter and 5% loss. **Hitch P2** freezes P2's machine for half a second
-(P1's waits, then time sync evens them out), **Force desync** nudges P2's simulation so the next
-checksum catches it, and **Restart** starts over. Each half shows its machine's net stats in the
-top-right corner (inside the F1 panel while that's open): ping, rollback frames per second and
-depth, local / remote frame advantage, waits (ticks spent waiting for the other machine), skips
-(frames skipped by time sync) and checksums matched.
-
-How far it stretches (8 frames of rollback, 2 frames of input delay): up to about 150 ms one way
-(300 ms ping) play stays at full speed; beyond that both machines start waiting for each other and
-the game slows down. Raising the input delay buys a little more.
+| `src/net/transports/` | `Transport` interface, `LoopbackTransport` and `FakeNetwork` (latency, jitter, loss), used by the tests |
 
 `tests/net.test.ts` runs both peers on a virtual clock and checks that they confirm exactly what
 an offline run of the same inputs produces: over a perfect link; at 100 ms / 10 ms jitter / 5% loss
@@ -236,8 +214,7 @@ sync; on disconnect; and that desyncs are detected.
 
 ## Online play
 
-Two browsers play 1v1 over a direct WebRTC connection, using the same rollback session as the
-netcode test. A small signaling server (`server/`) only introduces them: it hands out room codes
+Two browsers play 1v1 over a direct WebRTC connection, using that rollback session. A small signaling server (`server/`) only introduces them: it hands out room codes
 and passes the WebRTC offer, answer and ICE candidates between the two. Once they are connected
 it is out of the picture and never sees the game.
 
@@ -249,8 +226,8 @@ play with the one-player ("solo") keys or a pad, and on the results screen choos
 match, Esc twice leaves. If nothing arrives from the other player for 3 seconds the match ends
 with "connection lost"; if the other player leaves, you are told so.
 
-Each side's HUD marks its own fighter "YOU", and F1 shows the same netcode stats as the netcode
-test (ping, rollbacks, frame advantage, checksums). A finished or abandoned online match can be
+Each side's HUD marks its own fighter "YOU", and F1 shows the netcode stats (ping, rollbacks,
+frame advantage, checksums). A finished or abandoned online match can be
 watched again from the main menu.
 
 ### Running it locally

@@ -19,11 +19,10 @@ const CELL_W = 150;
 const CELL_H = 160;
 const GAP = 14;
 const GRID_TOP = 84;
-const TITLES: Record<Mode, string> = { cpu: 'Versus CPU', training: 'Training', netTest: 'Netcode Test', online: 'Online' };
+const TITLES: Record<Mode, string> = { cpu: 'Versus CPU', training: 'Training', online: 'Online' };
 const SUBTITLES: Record<Mode, string> = {
   cpu: "Pick your fighter, then each CPU's (they start on random fighters)",
   training: "Pick your fighter, then the CPU's",
-  netTest: 'Both players pick a fighter · each then plays on their own machine, linked by a fake network',
   online: 'Both players pick a fighter · the match starts once both are locked in',
 };
 /** Online: resend our cursor this often, so the other player's view can't stay stale. */

@@ -1,5 +1,5 @@
 import { Btn, type InputBits } from '../sim/input';
-import { BINDINGS, type LayoutName, type PlayerKeys } from './bindings';
+import { BINDINGS, type PlayerKeys } from './bindings';
 
 const BUTTON_FOR: [keyof PlayerKeys, number][] = [
   ['left', Btn.Left],
@@ -36,7 +36,6 @@ export class Keyboard {
   private presses = 0;
   private tapped = new Set<string>();
   private handlers = new Map<string, () => void>();
-  private layout: readonly PlayerKeys[] = BINDINGS.layouts.solo;
   /** Set by `captureNext`: the next key press goes here instead of to the game. */
   private capture: ((code: string) => void) | null = null;
 
@@ -80,19 +79,14 @@ export class Keyboard {
     return this.tapped.has(code);
   }
 
-  /** Which keys each player uses from now on. */
-  setLayout(name: LayoutName): void {
-    this.layout = BINDINGS.layouts[name];
-  }
-
-  /** A player's keys in the current layout. */
+  /** A player's keys. */
   keysOf(player: number): PlayerKeys | undefined {
-    return this.layout[player];
+    return BINDINGS.layouts.solo[player];
   }
 
   /** Bitmask for one player this frame. Call `endFrame` after sampling every player. */
   sample(player: number): InputBits {
-    const keys = this.layout[player];
+    const keys = BINDINGS.layouts.solo[player];
     if (!keys) return 0;
     let bits = 0;
     for (const [name, bit] of BUTTON_FOR) {

@@ -1,8 +1,6 @@
 // Controls: every action's keyboard key and gamepad button, and rebinding
 // them. Pick a cell and press the new key (or pad button); if another action
-// had it, the two swap. Changes are saved in this browser. This edits the
-// one-player keyboard layout used everywhere except the netcode test, whose
-// split keyboard stays fixed.
+// had it, the two swap. Changes are saved in this browser.
 
 import { BINDINGS } from '../input/bindings';
 import { connectedPads } from '../input/gamepad';
@@ -204,7 +202,7 @@ export class ControlsScreen implements Screen {
       : 'Up / down: choose · left / right: keyboard or gamepad · Attack / Enter: change · Esc: back';
     text(ctx, hint, W / 2, by + 70, { size: 15, align: 'center', color: '#ffffff', outline: true });
     if (this.noteTicks > 0) text(ctx, this.note, W / 2, by + 96, { size: 16, bold: true, align: 'center', color: '#9be59b', outline: true });
-    text(ctx, 'Saved in this browser · Enter, Esc and F1 keep their jobs · the Netcode test uses its own split keyboard', W / 2, 706, {
+    text(ctx, 'Saved in this browser · Enter, Esc and F1 keep their jobs', W / 2, 706, {
       size: 13,
       align: 'center',
       color: 'rgba(255,255,255,0.55)',

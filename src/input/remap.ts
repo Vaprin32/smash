@@ -1,7 +1,6 @@
-// Remappable controls: the one-player keyboard layout (used everywhere except
-// the netcode test's split keyboard) and the gamepad buttons. Changes are
-// written straight into BINDINGS, so every reader sees them at once, and
-// saved in this browser's localStorage.
+// Remappable controls: player 1's keyboard keys and the gamepad buttons.
+// Changes are written straight into BINDINGS, so every reader sees them at
+// once, and saved in this browser's localStorage.
 
 import { BINDINGS, type PadButtons, type PlayerKeys } from './bindings';
 
