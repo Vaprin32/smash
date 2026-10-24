@@ -12,14 +12,14 @@ export const SABLE: FighterDef = {
 
     walkSpeed: px(3),
     runSpeed: px(6.2),
-    runDelay: 8,
-    groundAccel: px(0.7),
-    groundFriction: px(0.6),
+    runDelay: 4,
+    groundAccel: px(1.1),
+    groundFriction: px(0.85),
     dashSpeed: px(10),
     dashFrames: 10,
     dashCooldown: 18,
 
-    jumpSquat: 4,
+    jumpSquat: 3,
     fullHopSpeed: px(10.2),
     shortHopSpeed: px(6.4),
     shortHopWindow: 3,
@@ -30,10 +30,10 @@ export const SABLE: FighterDef = {
     maxFallSpeed: px(7),
     fastFallSpeed: px(10.4),
     airMaxSpeed: px(3.4),
-    airAccel: px(0.32),
+    airAccel: px(0.48),
     airFriction: px(0.06),
 
-    landingLag: 4,
+    landingLag: 2,
     specialFallLanding: 16,
     dropThroughFrames: 10,
 

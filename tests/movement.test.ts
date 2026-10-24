@@ -64,10 +64,56 @@ describe('movement', () => {
   });
 
   it('turning around faces the other way immediately', () => {
-    let s = run(newMatch(), 20, Btn.Right);
+    let s = run(newMatch(), 2, Btn.Right);
     s = run(s, 1, Btn.Left);
     expect(s.fighters[0]!.facing).toBe(-1);
     expect(s.fighters[0]!.action).toBe(Action.Walk);
+  });
+
+  it('turning around out of a run keeps running, and gets up to speed the other way quickly', () => {
+    let s = run(newMatch(), 20, Btn.Right);
+    expect(s.fighters[0]!.action).toBe(Action.Run);
+    s = run(s, 1, Btn.Left);
+    expect(s.fighters[0]!.facing).toBe(-1);
+    expect(s.fighters[0]!.action).toBe(Action.Run);
+    s = run(s, 8, Btn.Left);
+    expect(s.fighters[0]!.vx).toBe(-st.runSpeed);
+  });
+
+  it('reaches full run speed within a few frames of holding a direction', () => {
+    const s = run(newMatch(), st.runDelay + 1, Btn.Right);
+    expect(s.fighters[0]!.vx).toBe(st.runSpeed);
+  });
+
+  it('holding the other way during a dash turns it into a run that way', () => {
+    let s = run(newMatch(), 1, Btn.Right | Btn.Dash);
+    expect(s.fighters[0]!.action).toBe(Action.Dash);
+    s = run(s, 3, Btn.Right);
+    s = run(s, 1, Btn.Left);
+    expect(s.fighters[0]!.action).toBe(Action.Run);
+    expect(s.fighters[0]!.facing).toBe(-1);
+  });
+
+  it('a running jump keeps more speed than a standing one', () => {
+    let run1 = run(newMatch(), 20, Btn.Right);
+    run1 = run(run1, st.jumpSquat + 2, Btn.Right | Btn.Jump);
+    expect(run1.fighters[0]!.ground).toBe(-1);
+    expect(run1.fighters[0]!.vx).toBeGreaterThan(st.airMaxSpeed);
+  });
+
+  it('letting go of the direction in the air stops the drift quickly', () => {
+    let s = run(newMatch(), st.jumpSquat + 12, (i) => Btn.Jump | (i > st.jumpSquat ? Btn.Right : 0));
+    expect(s.fighters[0]!.vx).toBe(st.airMaxSpeed);
+    s = run(s, 14, Btn.Jump);
+    expect(s.fighters[0]!.vx).toBe(0);
+  });
+
+  it('down held through the apex fast-falls', () => {
+    const s0 = newMatch();
+    s0.fighters[0]!.x = 0;
+    let s = run(s0, 8, Btn.Jump);
+    s = run(s, 24, Btn.Down);
+    expect(s.fighters[0]!.fastFall).toBe(1);
   });
 
   it('short hop (tap) is lower than full hop (hold), and both land', () => {

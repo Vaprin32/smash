@@ -16,10 +16,14 @@ const BUTTON_FOR: [keyof PlayerKeys, number][] = [
 
 /**
  * Tracks key state and produces one input bitmask per sim frame. A key tapped
- * and released between two samples still counts as held for one frame.
+ * and released between two samples still counts as held for one frame. When
+ * both keys of a pair (left/right, up/down) are held, the one pressed last
+ * wins, so rolling from one direction to the other never stalls on neutral.
  */
 export class Keyboard {
-  private down = new Set<string>();
+  /** Held keys, with the order they went down in. */
+  private down = new Map<string, number>();
+  private presses = 0;
   private tapped = new Set<string>();
   private handlers = new Map<string, () => void>();
   private bound = new Set<string>();
@@ -34,7 +38,7 @@ export class Keyboard {
     target.addEventListener('keydown', (e) => {
       if (this.bound.has(e.code)) e.preventDefault();
       if (e.repeat) return;
-      this.down.add(e.code);
+      this.down.set(e.code, ++this.presses);
       this.tapped.add(e.code);
       this.handlers.get(e.code)?.();
     });
@@ -77,7 +81,18 @@ export class Keyboard {
         if (this.down.has(code) || this.tapped.has(code)) bits |= bit;
       }
     }
-    return bits;
+    bits = this.lastWins(bits, keys.left, keys.right, Btn.Left, Btn.Right);
+    return this.lastWins(bits, keys.up, keys.down, Btn.Up, Btn.Down);
+  }
+
+  /** If both directions of a pair are on, keep only the more recently pressed one. */
+  private lastWins(bits: InputBits, a: readonly string[], b: readonly string[], bitA: number, bitB: number): InputBits {
+    if ((bits & (bitA | bitB)) !== (bitA | bitB)) return bits;
+    const latest = (codes: readonly string[]) => Math.max(0, ...codes.map((c) => this.down.get(c) ?? 0));
+    const ta = latest(a);
+    const tb = latest(b);
+    if (ta === tb) return bits & ~(bitA | bitB); // both only tapped this frame
+    return bits & ~(ta > tb ? bitB : bitA);
   }
 
   endFrame(): void {

@@ -12,9 +12,9 @@ export const PIP: FighterDef = {
 
     walkSpeed: px(3.6),
     runSpeed: px(7.2),
-    runDelay: 6,
-    groundAccel: px(1),
-    groundFriction: px(0.7),
+    runDelay: 3,
+    groundAccel: px(1.4),
+    groundFriction: px(0.95),
     dashSpeed: px(11),
     dashFrames: 9,
     dashCooldown: 14,
@@ -30,7 +30,7 @@ export const PIP: FighterDef = {
     maxFallSpeed: px(5.6),
     fastFallSpeed: px(8.6),
     airMaxSpeed: px(4.4),
-    airAccel: px(0.46),
+    airAccel: px(0.65),
     airFriction: px(0.08),
 
     landingLag: 2,

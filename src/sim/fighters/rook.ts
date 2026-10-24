@@ -12,14 +12,14 @@ export const ROOK: FighterDef = {
 
     walkSpeed: px(3),
     runSpeed: px(6.4),
-    runDelay: 8,
-    groundAccel: px(0.8),
-    groundFriction: px(0.65),
+    runDelay: 4,
+    groundAccel: px(1.2),
+    groundFriction: px(0.9),
     dashSpeed: px(10.5),
     dashFrames: 10,
     dashCooldown: 16,
 
-    jumpSquat: 4,
+    jumpSquat: 3,
     fullHopSpeed: px(10.6),
     shortHopSpeed: px(6.6),
     shortHopWindow: 3,
@@ -30,10 +30,10 @@ export const ROOK: FighterDef = {
     maxFallSpeed: px(7.2),
     fastFallSpeed: px(10.8),
     airMaxSpeed: px(3.6),
-    airAccel: px(0.34),
+    airAccel: px(0.5),
     airFriction: px(0.06),
 
-    landingLag: 4,
+    landingLag: 2,
     specialFallLanding: 14,
     dropThroughFrames: 10,
 

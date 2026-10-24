@@ -12,14 +12,14 @@ export const BRICK: FighterDef = {
 
     walkSpeed: px(2.4),
     runSpeed: px(5.2),
-    runDelay: 10,
-    groundAccel: px(0.5),
-    groundFriction: px(0.7),
+    runDelay: 5,
+    groundAccel: px(0.8),
+    groundFriction: px(0.95),
     dashSpeed: px(8.4),
     dashFrames: 11,
     dashCooldown: 20,
 
-    jumpSquat: 6,
+    jumpSquat: 4,
     fullHopSpeed: px(11.2),
     shortHopSpeed: px(6.8),
     shortHopWindow: 3,
@@ -30,10 +30,10 @@ export const BRICK: FighterDef = {
     maxFallSpeed: px(8),
     fastFallSpeed: px(11.5),
     airMaxSpeed: px(3),
-    airAccel: px(0.24),
+    airAccel: px(0.36),
     airFriction: px(0.05),
 
-    landingLag: 5,
+    landingLag: 3,
     specialFallLanding: 20,
     dropThroughFrames: 10,
 

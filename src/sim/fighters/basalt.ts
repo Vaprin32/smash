@@ -12,14 +12,14 @@ export const BASALT: FighterDef = {
 
     walkSpeed: px(2),
     runSpeed: px(4.4),
-    runDelay: 12,
-    groundAccel: px(0.4),
-    groundFriction: px(0.8),
+    runDelay: 6,
+    groundAccel: px(0.7),
+    groundFriction: px(1),
     dashSpeed: px(7.2),
     dashFrames: 12,
     dashCooldown: 24,
 
-    jumpSquat: 7,
+    jumpSquat: 5,
     fullHopSpeed: px(11),
     shortHopSpeed: px(7),
     shortHopWindow: 3,
@@ -30,10 +30,10 @@ export const BASALT: FighterDef = {
     maxFallSpeed: px(8.4),
     fastFallSpeed: px(12),
     airMaxSpeed: px(2.6),
-    airAccel: px(0.2),
+    airAccel: px(0.3),
     airFriction: px(0.05),
 
-    landingLag: 6,
+    landingLag: 4,
     specialFallLanding: 24,
     dropThroughFrames: 12,
 

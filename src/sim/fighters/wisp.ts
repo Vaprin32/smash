@@ -12,14 +12,14 @@ export const WISP: FighterDef = {
 
     walkSpeed: px(3.2),
     runSpeed: px(6.4),
-    runDelay: 8,
-    groundAccel: px(0.8),
-    groundFriction: px(0.6),
+    runDelay: 4,
+    groundAccel: px(1.2),
+    groundFriction: px(0.85),
     dashSpeed: px(10),
     dashFrames: 10,
     dashCooldown: 16,
 
-    jumpSquat: 4,
+    jumpSquat: 3,
     fullHopSpeed: px(9.6),
     shortHopSpeed: px(6.2),
     shortHopWindow: 3,
@@ -30,10 +30,10 @@ export const WISP: FighterDef = {
     maxFallSpeed: px(6.2),
     fastFallSpeed: px(9.5),
     airMaxSpeed: px(4.0),
-    airAccel: px(0.38),
+    airAccel: px(0.55),
     airFriction: px(0.06),
 
-    landingLag: 3,
+    landingLag: 2,
     specialFallLanding: 12,
     dropThroughFrames: 10,
 

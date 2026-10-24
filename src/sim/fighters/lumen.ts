@@ -12,14 +12,14 @@ export const LUMEN: FighterDef = {
 
     walkSpeed: px(2.8),
     runSpeed: px(5.8),
-    runDelay: 9,
-    groundAccel: px(0.6),
-    groundFriction: px(0.5),
+    runDelay: 5,
+    groundAccel: px(0.95),
+    groundFriction: px(0.75),
     dashSpeed: px(9),
     dashFrames: 10,
     dashCooldown: 18,
 
-    jumpSquat: 5,
+    jumpSquat: 3,
     fullHopSpeed: px(8.8),
     shortHopSpeed: px(5.6),
     shortHopWindow: 3,
@@ -30,10 +30,10 @@ export const LUMEN: FighterDef = {
     maxFallSpeed: px(5),
     fastFallSpeed: px(8),
     airMaxSpeed: px(3.6),
-    airAccel: px(0.3),
+    airAccel: px(0.45),
     airFriction: px(0.05),
 
-    landingLag: 4,
+    landingLag: 2,
     specialFallLanding: 14,
     dropThroughFrames: 10,
 

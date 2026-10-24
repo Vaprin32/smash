@@ -10,9 +10,9 @@ export const RESPAWN_MAX_WAIT = 120;
 /** Invincibility after leaving the respawn point (~2 s). */
 export const RESPAWN_INVINCIBILITY = 120;
 /** A jump pressed this many frames early (e.g. during landing lag) still comes out. */
-export const JUMP_BUFFER_FRAMES = 4;
+export const JUMP_BUFFER_FRAMES = 6;
 /** Same for attack / special / dodge presses. */
-export const ACTION_BUFFER_FRAMES = 5;
+export const ACTION_BUFFER_FRAMES = 6;
 
 export const MAX_DAMAGE = 999;
 /** Hitlag (freeze on hit, both fighters) = base + damage / divisor, capped. */

@@ -12,9 +12,9 @@ export const KESTREL: FighterDef = {
 
     walkSpeed: px(3.4),
     runSpeed: px(7.6),
-    runDelay: 7,
-    groundAccel: px(1),
-    groundFriction: px(0.8),
+    runDelay: 3,
+    groundAccel: px(1.5),
+    groundFriction: px(1.1),
     dashSpeed: px(12),
     dashFrames: 9,
     dashCooldown: 16,
@@ -30,10 +30,10 @@ export const KESTREL: FighterDef = {
     maxFallSpeed: px(9),
     fastFallSpeed: px(13.5),
     airMaxSpeed: px(4.2),
-    airAccel: px(0.42),
+    airAccel: px(0.6),
     airFriction: px(0.07),
 
-    landingLag: 3,
+    landingLag: 2,
     specialFallLanding: 14,
     dropThroughFrames: 8,
 

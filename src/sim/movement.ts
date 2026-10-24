@@ -46,9 +46,9 @@ function groundControl(
 ): void {
   const st = def.stats;
   if (f.action === Action.JumpSquat) {
+    // Momentum carries through the squat into the jump.
     f.actionFrame++;
-    f.vx = approach(f.vx, 0, st.groundFriction);
-    if (f.actionFrame >= st.jumpSquat) launchJump(f, input, st);
+    if (f.actionFrame >= st.jumpSquat) launchJump(f, input, dirX, st);
     return;
   }
   if (f.action === Action.Landing) {
@@ -67,7 +67,6 @@ function groundControl(
   if (f.jumpBuffer > 0) {
     f.jumpBuffer = 0;
     setAction(f, Action.JumpSquat);
-    f.vx = approach(f.vx, 0, st.groundFriction);
     return;
   }
 
@@ -87,8 +86,9 @@ function groundControl(
   }
 
   if (dirX !== f.facing) {
+    // Turning around: a running fighter skids into a run the other way.
     f.facing = dirX;
-    setAction(f, Action.Walk);
+    setAction(f, f.action === Action.Run ? Action.Run : Action.Walk);
   } else if (f.action === Action.Walk) {
     f.actionFrame++;
     if (f.actionFrame >= st.runDelay) {
@@ -103,12 +103,15 @@ function groundControl(
 
   const target = dirX * (f.action === Action.Run ? st.runSpeed : st.walkSpeed);
   let rate = st.groundAccel;
-  if (f.vx * dirX < 0) rate = st.groundAccel + st.groundFriction; // turning around
+  if (f.vx * dirX < 0) rate = 2 * (st.groundAccel + st.groundFriction); // turning around
   else if (f.vx * dirX > target * dirX) rate = st.groundFriction; // over speed (e.g. run -> walk)
   f.vx = approach(f.vx, target, rate);
 }
 
-/** Dash: speed decays from dashSpeed to runSpeed; can jump or act out of it. */
+/**
+ * Dash: speed decays from dashSpeed to runSpeed; can jump or act out of it,
+ * and holding the other way turns it into a run that way.
+ */
 function dashControl(f: FighterState, input: number, pressed: number, dirX: number, def: FighterDef): void {
   const st = def.stats;
   f.actionFrame++;
@@ -116,6 +119,12 @@ function dashControl(f: FighterState, input: number, pressed: number, dirX: numb
   if (f.jumpBuffer > 0) {
     f.jumpBuffer = 0;
     setAction(f, Action.JumpSquat);
+    return;
+  }
+  if (dirX === -f.facing) {
+    f.facing = dirX;
+    setAction(f, Action.Run);
+    f.vx = approach(f.vx, dirX * st.runSpeed, 2 * (st.groundAccel + st.groundFriction));
     return;
   }
   if (f.actionFrame < st.dashFrames) {
@@ -127,11 +136,18 @@ function dashControl(f: FighterState, input: number, pressed: number, dirX: numb
   setAction(f, dirX === f.facing ? Action.Run : Action.Idle);
 }
 
-function launchJump(f: FighterState, input: number, st: FighterStats): void {
+/** A running jump keeps up to this much more than air speed (percent). */
+const JUMP_CARRY_PERCENT = 150;
+
+function launchJump(f: FighterState, input: number, dirX: number, st: FighterStats): void {
   const held = (input & Btn.Jump) !== 0;
   f.vy = -(held ? st.fullHopSpeed : st.shortHopSpeed);
   f.hopOpen = held ? 1 : 0;
-  f.vx = clamp(f.vx, -st.airMaxSpeed, st.airMaxSpeed);
+  // Ground speed carries into the air. Holding the other way (or nothing,
+  // from a standstill) jumps at no more than air speed.
+  const carry = dirX !== 0 && f.vx * dirX > 0 ? idiv(st.airMaxSpeed * JUMP_CARRY_PERCENT, 100) : st.airMaxSpeed;
+  f.vx = clamp(f.vx, -carry, carry);
+  if (dirX !== 0 && f.vx * dirX < 0) f.vx = 0; // jumping back out of a run
   f.ground = -1;
   setAction(f, Action.Air);
 }
@@ -168,6 +184,9 @@ function airControl(f: FighterState, input: number, pressed: number, dirX: numbe
   airMotion(f, input, pressed, st, true, true);
 }
 
+/** With no direction held, air drift slows this many times faster than air friction alone. */
+const AIR_BRAKE = 5;
+
 /** Air drift, fast-fall and gravity for one frame. */
 export function airMotion(
   f: FighterState,
@@ -179,10 +198,17 @@ export function airMotion(
 ): void {
   if (f.dropTimer > 0 && f.action !== Action.Air) f.dropTimer--;
   if (drift) {
-    if (pressed & Btn.Down && f.vy >= 0) f.fastFall = 1;
+    // Pressing down after the apex fast-falls. Outside attacks (where down aims
+    // a down air), so does down held through the apex.
+    const heldThroughApex = input & Btn.Down && f.vy < st.gravity && f.action === Action.Air;
+    if (f.vy >= 0 && (pressed & Btn.Down || heldThroughApex)) f.fastFall = 1;
     const dirX = inputDirX(input);
-    if (dirX !== 0) f.vx = approach(f.vx, dirX * st.airMaxSpeed, st.airAccel);
-    else f.vx = approach(f.vx, 0, st.airFriction);
+    const target = dirX * st.airMaxSpeed;
+    // Past air speed (a running jump), holding that way only bleeds speed slowly.
+    // Letting go of the direction brakes harder than plain air friction.
+    if (dirX !== 0 && f.vx * dirX > st.airMaxSpeed) f.vx = approach(f.vx, target, 2 * st.airFriction);
+    else if (dirX !== 0) f.vx = approach(f.vx, target, st.airAccel);
+    else f.vx = approach(f.vx, 0, AIR_BRAKE * st.airFriction);
   } else {
     f.vx = approach(f.vx, 0, st.airFriction);
   }

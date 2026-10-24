@@ -52,6 +52,20 @@ describe('keyboard layouts', () => {
     }
   });
 
+  it('with both directions of a pair held, the one pressed last wins', () => {
+    const { keyboard, down, up } = fakeKeyboard();
+    down('KeyA');
+    expect(keyboard.sample(0)).toBe(Btn.Left);
+    down('KeyD'); // rolled onto D before letting go of A
+    expect(keyboard.sample(0)).toBe(Btn.Right);
+    keyboard.endFrame();
+    up('KeyD');
+    expect(keyboard.sample(0)).toBe(Btn.Left);
+    down('KeyS');
+    down('KeyW');
+    expect(keyboard.sample(0)).toBe(Btn.Left | Btn.Up);
+  });
+
   it('the same physical key means different things per layout', () => {
     const { keyboard, down } = fakeKeyboard();
     down('KeyK');
