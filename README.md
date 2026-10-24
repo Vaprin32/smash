@@ -104,6 +104,14 @@ smash (hold to charge); up smash also reaches straight up through the platform o
 someone standing on it. Special + direction: neutral / side / up (recovery) / down special.
 Down on a platform drops through it, and holding down while falling passes through platforms
 instead of landing on them.
+
+**Ledges** work like in Ultimate. Falling (or recovering with an up special) close to a corner of
+the stage grabs it, unless you hold down. Grabbing restores your air jumps, air dodge and
+once-per-air specials, and the first grab since you last touched the ground makes you briefly
+intangible (regrabs don't, so you can't stall on the ledge). From the ledge: up or toward the stage
+climbs up, jump leaps up, attack / smash / special climbs into a ledge attack, shield rolls in, and
+down or away lets go. Hanging for 5 seconds lets go by itself. Grabbing a ledge someone already
+hangs from knocks them off it. The rules are in `src/sim/ledges.ts`, the numbers in `src/sim/rules.ts`.
 Shield + direction rolls or spot dodges, shield + attack grabs; while holding, attack pummels
 and a direction throws.
 

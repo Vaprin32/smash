@@ -7,7 +7,7 @@ import { Action } from '../sim/actions';
 import { FIGHTERS } from '../sim/fighters';
 import { ONE } from '../sim/fixed';
 import { MoveId, type MoveDef } from '../sim/moves/types';
-import { SHIELD_DROP_FRAMES } from '../sim/rules';
+import { LEDGE_CLIMB_FRAMES, SHIELD_DROP_FRAMES } from '../sim/rules';
 import type { FighterState, MatchState } from '../sim/state';
 import { mixPose, type Pose } from './skeleton';
 
@@ -33,6 +33,10 @@ const TUCK = P({ torso: 30, head: 10, armF: [70, 90], armB: [50, 100], legF: [10
 const FAST_FALL = P({ torso: -4, armF: [172, 0], armB: [165, 5], legF: [4, 0], legB: [-4, -6] });
 const DASH = P({ torso: 26, head: -10, armF: [-55, 55], armB: [55, 70], legF: [60, -40], legB: [-50, -35] });
 const HURT = P({ torso: -26, head: -18, armF: [150, 40], armB: [120, 60], legF: [30, -55], legB: [-20, -40] });
+/** Hanging from a ledge: arms up over the corner, legs dangling against the wall. */
+const HANG = P({ torso: 6, head: -10, armF: [168, 4], armB: [158, 8], legF: [12, -18], legB: [-4, -8] });
+/** Halfway up a ledge: one knee on the corner, pushing up. */
+const CLIMB = P({ torso: 34, head: -14, armF: [60, 40], armB: [40, 60], legF: [100, -120], legB: [10, -30] });
 const LIMP = P({ torso: 12, head: 18, armF: [25, 10], armB: [15, 10], legF: [10, -20], legB: [-10, -35] });
 const GUARD = P({ torso: 12, head: -4, armF: [75, 110], armB: [62, 118], legF: [28, -40], legB: [-28, -25] });
 const HOLD = P({ torso: 14, armF: [86, 10], armB: [76, 16], legF: [25, -20], legB: [-25, -10] });
@@ -342,6 +346,16 @@ export function animate(f: FighterState, state: MatchState): Animated {
     case Action.Held: {
       const w = Math.sin(state.frame * 0.4) * 6;
       return out({ ...HELD, armF: [40 + w, 30], armB: [20 - w, 40] }, grounded);
+    }
+    case Action.LedgeHang: {
+      const sway = Math.sin(state.frame * 0.08) * 4;
+      return out({ ...HANG, legF: [12 + sway, -18], legB: [-4 - sway, -8] }, false);
+    }
+    case Action.LedgeClimb:
+    case Action.LedgeClimbAttack:
+    case Action.LedgeClimbRoll: {
+      const k = clamp01(t / LEDGE_CLIMB_FRAMES);
+      return out(k < 0.5 ? mixPose(HANG, CLIMB, ease(k * 2)) : mixPose(CLIMB, CROUCH, ease(k * 2 - 1)), false);
     }
     case Action.ShieldBreak: {
       if (!grounded) return out(HURT, false);

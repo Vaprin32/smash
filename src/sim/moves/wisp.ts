@@ -169,6 +169,13 @@ const moves: Record<number, MoveDef> = {
   [MoveId.BThrow]: { name: 'Back Throw', total: 34, hitboxes: [], throw: { frame: 14, hit: launch(9, 5.5, 11, 135) } },
   [MoveId.UThrow]: { name: 'Up Throw', total: 32, hitboxes: [], throw: { frame: 12, hit: launch(6, 6, 6, 90) } },
   [MoveId.DThrow]: { name: 'Down Throw', total: 30, hitboxes: [], throw: { frame: 12, hit: launch(5, 4, 4, 80) } },
+  // --- From the ledge ---
+  [MoveId.LedgeAttack]: {
+    // A low sweep along the stage edge, right after climbing up.
+    name: 'Ledge Attack',
+    total: 26,
+    hitboxes: [hitbox({ frames: [7, 10], x: 26, y: -16, r: 22, damage: 9, kb: 5.5, growth: 6, angle: 25 })],
+  },
 };
 
 /** Indexed by MoveId. */

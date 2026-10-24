@@ -1,4 +1,4 @@
-import { Action, setAction } from './actions';
+import { Action, isLedgeAction, setAction } from './actions';
 import { updateAttack, updateDodge, updateHeld, updateHolding, updateSpecialFall } from './attacks';
 import { resolveHits, updateHitstun } from './combat';
 import { FIGHTERS } from './fighters';
@@ -16,6 +16,7 @@ import {
 } from './rules';
 import { isShieldAction, updateShield, updateShieldBreak } from './shield';
 import { updateGrabs } from './grabs';
+import { grabLedges, updateLedgeClimb, updateLedgeHang } from './ledges';
 import { updateProjectiles } from './projectiles';
 import { STAGES, type StageDef } from './stage';
 import { cloneState, type FighterState, type MatchState } from './state';
@@ -34,6 +35,7 @@ export function step(prev: MatchState, inputs: readonly InputBits[]): MatchState
     updateFighter(f, i, input, stage);
     f.prevInput = input;
   }
+  grabLedges(s, stage, inputs);
   updateProjectiles(s, stage);
   updateGrabs(s);
   resolveHits(s);
@@ -63,6 +65,8 @@ function updateFighter(f: FighterState, slot: number, input: number, stage: Stag
 
   if (f.invincible > 0) f.invincible--;
   if (f.dashCooldown > 0) f.dashCooldown--;
+  if (f.ledgeCooldown > 0) f.ledgeCooldown--;
+  if (!isLedgeAction(f.action)) f.ledge = -1; // knocked off it
   if (!isShieldAction(f.action)) f.shieldHp = Math.min(SHIELD_MAX, f.shieldHp + SHIELD_REGEN);
   readButtons(f, pressed);
 
@@ -97,6 +101,14 @@ function updateFighter(f: FighterState, slot: number, input: number, stage: Stag
     case Action.Holding:
       updateHolding(f, input, def);
       break;
+    case Action.LedgeHang:
+      updateLedgeHang(f, pressed, def, stage);
+      break;
+    case Action.LedgeClimb:
+    case Action.LedgeClimbAttack:
+    case Action.LedgeClimbRoll:
+      updateLedgeClimb(f, def, stage);
+      break;
     default:
       controlFighter(f, input, pressed, def, stage);
   }
@@ -109,6 +121,7 @@ function updateFighter(f: FighterState, slot: number, input: number, stage: Stag
     }
   }
 
+  if (isLedgeAction(f.action)) return; // placed by the ledge, not by physics
   moveFighter(f, def, stage, input);
   if (f.ground >= 0 && isStanding(f.action)) f.lastHitBy = -1;
 
@@ -150,6 +163,9 @@ function respawn(f: FighterState, slot: number, def: FighterDef, stage: StageDef
   f.hitlag = 0;
   f.invincible = RESPAWN_INVINCIBILITY;
   f.lastHitBy = -1;
+  f.ledge = -1;
+  f.ledgeCooldown = 0;
+  f.ledgeGrabs = 0;
   setAction(f, Action.Respawn);
 }
 

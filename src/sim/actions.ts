@@ -37,6 +37,12 @@ export const Action = {
   Holding: 20,
   /** Being held by `heldBy`; mash to escape before `grabTimer` runs out. */
   Held: 21,
+  /** Hanging from ledge `ledge`. */
+  LedgeHang: 22,
+  /** Climbing from the ledge onto the stage: then standing, a ledge attack, or a roll. */
+  LedgeClimb: 23,
+  LedgeClimbAttack: 24,
+  LedgeClimbRoll: 25,
 } as const;
 
 export type ActionId = (typeof Action)[keyof typeof Action];
@@ -64,7 +70,16 @@ export const ACTION_NAMES: readonly string[] = [
   'ShieldBreak',
   'Holding',
   'Held',
+  'LedgeHang',
+  'LedgeClimb',
+  'LedgeClimbAttack',
+  'LedgeClimbRoll',
 ];
+
+/** On a ledge: hanging or climbing up from it (position comes from the ledge, not physics). */
+export function isLedgeAction(action: number): boolean {
+  return action >= Action.LedgeHang && action <= Action.LedgeClimbRoll;
+}
 
 /** Grounded states that just become Air when the fighter leaves the ground. */
 export function isGroundFree(action: number): boolean {

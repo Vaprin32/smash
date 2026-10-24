@@ -70,5 +70,24 @@ export const GRAB_MASH_FRAMES = 4;
 /** Both fighters slide apart at this speed when the held fighter breaks free. */
 export const GRAB_RELEASE_SPEED = px(4);
 
+// Ledges (Ultimate-style).
+/** Grab reach: how far the hands may be from the ledge corner, sideways (out from the stage) and up/down. */
+export const LEDGE_REACH_OUT = px(40);
+export const LEDGE_REACH_IN = px(12);
+export const LEDGE_REACH_UP = px(36);
+export const LEDGE_REACH_DOWN = px(48);
+/** Intangibility on the first ledge grab since touching the ground; regrabs get none (no ledge stalling). */
+export const LEDGE_GRAB_INVINCIBILITY = 45;
+/** Frames hanging before any ledge option is accepted. */
+export const LEDGE_ACTIONABLE = 6;
+/** Hanging longer than this lets go. */
+export const LEDGE_MAX_HANG = 300;
+/** After letting go (or being knocked off), frames before a ledge can be grabbed again. */
+export const LEDGE_REGRAB_COOLDOWN = 30;
+/** Climbing up takes this long (intangible throughout). */
+export const LEDGE_CLIMB_FRAMES = 14;
+/** Getting pushed off a ledge by someone else grabbing it. */
+export const LEDGE_TRUMP_PUSH = px(3);
+
 /** How long an attacker is frozen when their hit is countered. */
 export const COUNTER_FREEZE = 18;

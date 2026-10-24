@@ -71,6 +71,12 @@ export interface FighterState {
    * once back on their feet and on respawn, so a KO goes to whoever caused it.
    */
   lastHitBy: number;
+  /** Ledge index (see `ledgeOf`) while hanging from / climbing up a ledge, else -1. */
+  ledge: number;
+  /** Frames until a ledge can be grabbed again. */
+  ledgeCooldown: number;
+  /** Ledge grabs since last touching the ground (only the first is intangible). */
+  ledgeGrabs: number;
 }
 
 /** Serialization order. Append new fields at the end. */
@@ -114,6 +120,9 @@ export const FIGHTER_FIELDS = [
   'dashCooldown',
   'event',
   'lastHitBy',
+  'ledge',
+  'ledgeCooldown',
+  'ledgeGrabs',
 ] as const satisfies readonly (keyof FighterState)[];
 
 export interface MatchState {
@@ -185,6 +194,9 @@ export function createMatch(setup: MatchSetup): MatchState {
         dashCooldown: 0,
         event: 0,
         lastHitBy: -1,
+        ledge: -1,
+        ledgeCooldown: 0,
+        ledgeGrabs: 0,
       };
     }),
   };

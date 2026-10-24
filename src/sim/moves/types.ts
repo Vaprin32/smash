@@ -32,6 +32,8 @@ export const MoveId = {
   BThrow: 23,
   UThrow: 24,
   DThrow: 25,
+  /** Climbing up from a ledge with the attack button. */
+  LedgeAttack: 26,
 } as const;
 
 export type MoveIdValue = (typeof MoveId)[keyof typeof MoveId];

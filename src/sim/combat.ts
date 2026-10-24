@@ -2,7 +2,7 @@
 // against the same post-movement state, then applied (hits before grabs), so
 // fighter order can't matter.
 
-import { Action, setAction } from './actions';
+import { Action, isLedgeAction, setAction } from './actions';
 import { startMove } from './attacks';
 import { SimEvent } from './events';
 import { approach, idiv, ONE } from './fixed';
@@ -142,7 +142,7 @@ export function resolveHits(s: MatchState): void {
     const a = s.fighters[g.a]!;
     const v = s.fighters[g.v]!;
     // A grab whiffs if the grabber got hit this frame or the target is already held.
-    if (a.action !== Action.Attack || a.move !== MoveId.Grab || v.action === Action.Held) continue;
+    if (a.action !== Action.Attack || a.move !== MoveId.Grab || v.action === Action.Held || isLedgeAction(v.action)) continue;
     // Both grabbed each other: bounce apart.
     const mutual = grabs.some((o) => o.a === g.v && o.v === g.a);
     if (mutual) {

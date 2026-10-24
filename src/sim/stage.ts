@@ -93,6 +93,29 @@ export function surfaceOf(stage: StageDef, ground: number): Surface {
   return { left: p.left, right: p.right, top: p.top, passThrough: true };
 }
 
+/**
+ * A ledge: a top corner of a solid block that fighters can hang from. Ledge
+ * `2b` is block b's left corner, `2b + 1` its right one. `side` is -1 on
+ * a left corner (the fighter hangs on the left, facing right), +1 on a right one.
+ */
+export interface Ledge {
+  x: number;
+  y: number;
+  side: number;
+  block: number;
+}
+
+export function ledgeCount(stage: StageDef): number {
+  return stage.blocks.length * 2;
+}
+
+export function ledgeOf(stage: StageDef, index: number): Ledge {
+  const block = index >> 1;
+  const b = stage.blocks[block]!;
+  const right = (index & 1) === 1;
+  return { x: right ? b.right : b.left, y: b.top, side: right ? 1 : -1, block };
+}
+
 export function platformGroundIndex(stage: StageDef, platform: number): number {
   return stage.blocks.length + platform;
 }

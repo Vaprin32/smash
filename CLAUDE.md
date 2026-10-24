@@ -37,6 +37,7 @@ Everything rollback, replays and the CPU rely on comes from these rules. Break t
 - `tests/banned.test.ts` scans `src/sim/` and fails on `Math.random`, `Date`, `performance`, timers, rAF, float trig/pow/exp/log, `window`/`document`/`console`, `parseFloat` and similar, and on any import that leaves `src/sim/`. Use the integer trig in `trig.ts` and the seeded RNG in `rng.ts`, whose state lives in `MatchState.rng`.
 - `MatchState` (`state.ts`) is `{ frame, rng, stageId, fighters[] }` and every `FighterState` field is an int. Serialization follows the `FIGHTER_FIELDS` array, so **a new fighter field must also be added to `FIGHTER_FIELDS` (append at the end), to `createMatch`, and to `respawn` in `step.ts` if it should reset.** `hashState` is FNV-1a over the serialized bytes.
 - Append-only orderings: `FIGHTERS` in `fighters/index.ts` (indexed by `charId`), `MoveId` in `moves/types.ts`, and `FIGHTER_FIELDS`.
+- Ledges (`ledges.ts`) are every solid block's two top corners (`ledgeOf(stage, i)`: `2b` left, `2b+1` right). Grabs are resolved in a pass after all fighters move (player order decides ties). Ledge actions (`isLedgeAction`) skip `moveFighter`: the ledge sets the position.
 - Up to `MAX_PLAYERS = 4` fighters. Each stage has a spawn layout for every player count.
 - Sim → presentation signalling: the sim sets a one-frame `FighterState.event` (`SimEvent` in `events.ts`). Render and audio react to it and dedupe by `(frame, fighter, event)` (`render/effects.ts`), so re-simulating frames after a rollback never double-triggers effects.
 

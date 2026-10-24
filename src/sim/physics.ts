@@ -105,6 +105,7 @@ function land(f: FighterState, ground: number, top: number, def: FighterDef): vo
   f.dropTimer = 0;
   f.airDodgeUsed = 0;
   f.oncePerAirUsed = 0;
+  f.ledgeGrabs = 0;
 
   switch (f.action) {
     case Action.Hitstun:

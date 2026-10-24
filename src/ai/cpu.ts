@@ -12,7 +12,8 @@ import type { FighterDef } from '../sim/fighters/types';
 import { ONE, px } from '../sim/fixed';
 import { Btn, type InputBits } from '../sim/input';
 import { MoveId, type MoveDef, type MoveIdValue } from '../sim/moves/types';
-import { STAGES, type StageDef } from '../sim/stage';
+import { LEDGE_ACTIONABLE } from '../sim/rules';
+import { ledgeOf, STAGES, type StageDef } from '../sim/stage';
 import type { FighterState, MatchState } from '../sim/state';
 import type { CpuLevel } from './levels';
 import { firstHit, moveEnd, touches, untouchableFor } from './predict';
@@ -126,6 +127,8 @@ export class CpuPlayer {
   private target = -1;
   private targetFor = 0;
   private respawnWait = -1;
+  /** Frames left before taking a ledge option (-1: not hanging). */
+  private ledgeWait = -1;
   /** Pummels left before throwing (-1: not holding anyone). */
   private pummels = -1;
   /** Attacks already seen coming: whether this CPU chose to defend against each. */
@@ -157,6 +160,7 @@ export class CpuPlayer {
     const ext = extentsOf(stage);
     const def = FIGHTERS[me.charId]!;
     if (me.action !== Action.Respawn) this.respawnWait = -1;
+    if (me.action !== Action.LedgeHang) this.ledgeWait = -1;
     if (me.action !== Action.Holding && !(me.action === Action.Attack && me.move === MoveId.Pummel)) this.pummels = -1;
 
     switch (me.action) {
@@ -171,11 +175,18 @@ export class CpuPlayer {
         return this.mash();
       case Action.Respawn:
         return this.respawn(me);
+      case Action.LedgeClimb:
+      case Action.LedgeClimbAttack:
+      case Action.LedgeClimbRoll:
+        this.queue = [];
+        return 0;
     }
     if (this.queue.length > 0) return this.queue.shift()!;
 
     const seen = this.history[0]!;
     switch (me.action) {
+      case Action.LedgeHang:
+        return this.onLedge(me, stage);
       case Action.Holding:
         return this.holding(me);
       case Action.ShieldStun:
@@ -453,6 +464,16 @@ export class CpuPlayer {
     if (rec.down && !used(MoveId.DownSpecial)) return this.run(this.pressSeq(Btn.Down, Btn.Special));
     if (me.y > ext.top - px(30) || out > px(150)) return this.run(this.pressSeq(hold | Btn.Up, Btn.Special));
     return hold;
+  }
+
+  /** Hang a moment (mixing up the timing), then climb, jump, attack or roll onto the stage. */
+  private onLedge(me: FighterState, stage: StageDef): InputBits {
+    if (this.ledgeWait < 0) this.ledgeWait = LEDGE_ACTIONABLE + this.rand(this.level.reaction + 10);
+    if (--this.ledgeWait > 0) return 0;
+    const toward = xBit(-ledgeOf(stage, me.ledge).side);
+    const r = this.rand(100);
+    const button = r < 40 ? toward : r < 60 ? Btn.Jump : r < 80 ? Btn.Attack : Btn.Dodge;
+    return this.run(this.pressSeq(0, button));
   }
 
   /** Toward the middle of the stage; out from under it first if it's below. */
