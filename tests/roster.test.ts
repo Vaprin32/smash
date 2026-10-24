@@ -235,6 +235,24 @@ describe('weight and launch distance', () => {
   });
 });
 
+describe('every fighter has their own moves', () => {
+  const SMASHES = [MoveId.FSmash, MoveId.USmash, MoveId.DSmash];
+  it('smash attacks (K) are hand-written per fighter: no two fighters share one', () => {
+    const names = FIGHTERS.flatMap((def) => SMASHES.map((id) => def.moves[id]!.name));
+    expect(new Set(names).size).toBe(names.length);
+  });
+
+  it("no special (I) repeats one of the same fighter's smash attacks", () => {
+    for (const def of FIGHTERS) {
+      const smashNames = SMASHES.map((id) => def.moves[id]!.name);
+      for (const id of SPECIALS) expect(smashNames, def.name).not.toContain(def.moves[id]!.name);
+      // Same shape check: a special whose hitboxes sit where a smash's do (same spots, same angles) is a copy.
+      const shape = (id: number) => def.moves[id]!.hitboxes.map((h) => [Math.round(h.x / 2560), Math.round(h.y / 2560), h.angle].join()).sort().join('|');
+      for (const sm of SMASHES) for (const sp of SPECIALS) if (shape(sp)) expect(shape(sp), `${def.name} ${def.moves[sp]!.name}`).not.toBe(shape(sm));
+    }
+  });
+});
+
 describe('specials', () => {
   it('fighters with a projectile hit a dummy at range', () => {
     FIGHTERS.forEach((def, c) => {

@@ -133,6 +133,28 @@ function drawProjectile(ctx: CanvasRenderingContext2D, f: FighterState, color: s
   ctx.strokeStyle = color;
   ctx.lineWidth = 3;
   switch (lookOf(f.charId).projectile) {
+    case 'gauntlet': {
+      // A tumbling steel gauntlet: plated cuff, fingers, owner-colored lining.
+      ctx.translate(x, y);
+      ctx.rotate(spin * 0.6);
+      ctx.fillStyle = '#c9ced6';
+      ctx.strokeStyle = THEME.outline;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.roundRect(-9, -6, 11, 12, 3);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = '#aab1bb';
+      for (let k = 0; k < 4; k++) {
+        ctx.beginPath();
+        ctx.roundRect(2, -6 + k * 3, 8, 2.6, 1.2);
+        ctx.fill();
+        ctx.stroke();
+      }
+      ctx.fillStyle = color;
+      ctx.fillRect(-9, -6, 3, 12);
+      break;
+    }
     case 'pebble':
       ctx.fillStyle = '#b9a58a';
       ctx.strokeStyle = '#11131f';

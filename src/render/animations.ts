@@ -156,13 +156,32 @@ const SLAM = P({ torso: 40, head: 10, armF: [40, 0], armB: [30, 0], legF: [50, -
  * Per-fighter overrides (by fighter name, then MoveId) for signature moves
  * whose shape differs from Wisp's. Anything not listed uses ATTACKS.
  */
+/** Knee up, then both feet slam down (a stomp felt on both sides). */
+const KNEE_UP = P({ torso: -4, head: -6, armF: [40, 50], armB: [-40, 50], legF: [95, -100], legB: [-6, -8] });
+const STOMP = P({ torso: 18, head: 8, armF: [30, 20], armB: [-30, 20], legF: [40, -60], legB: [-40, -60] });
+/** Low, arms flung out to both sides (scatter, pillars, quake). */
+const SPREAD_LOW = P({ torso: 22, head: -6, armF: [95, 0], armB: [-95, 0], legF: [70, -110], legB: [25, -115] });
+/** Splits on the ground, one leg each way. */
+const SPLITS = P({ torso: 30, head: -8, armF: [40, 30], armB: [-40, 30], legF: [92, 0], legB: [-92, 0] });
+/** Arms sweeping over the top: in front, overhead, behind. */
+const ARC_FRONT = P({ torso: 6, head: -10, armF: [120, 0], armB: [100, 10], legF: [30, -20], legB: [-30, -10] });
+const ARC_TOP = P({ torso: -6, head: -16, armF: [178, 0], armB: [165, 6], legF: [10, -10], legB: [-10, -10] });
+const ARC_BACK = P({ torso: -20, head: -22, armF: [-140, 0], armB: [-120, 10], legF: [25, -10], legB: [-35, -20] });
+/** A two-handed blade raised high behind the head, then brought down in front. */
+const CLEAVE_UP = P({ torso: -14, head: -10, armF: [200, 20], armB: [190, 20], legF: [30, -20], legB: [-30, -10] });
+const CLEAVE_DOWN = P({ torso: 34, head: 4, armF: [70, 0], armB: [62, 6], legF: [55, -50], legB: [-45, 0] });
+/** Heavy front kick. */
+const BIG_KICK = P({ torso: -26, head: -8, armF: [-50, 30], armB: [50, 40], legF: [100, 0], legB: [-12, -6] });
+
 const CHAR_ATTACKS: Record<string, Record<number, AttackAnim>> = {
   Brick: {
-    [MoveId.NSpecial]: ATTACKS[MoveId.FSmash]!,
     [MoveId.SideSpecial]: A(DASH, SHOULDER_CHARGE),
     [MoveId.DownSpecial]: ATTACKS[MoveId.DAir]!,
+    [MoveId.DSmash]: A(KNEE_UP, STOMP),
   },
   Pip: {
+    [MoveId.FSmash]: ATTACKS[MoveId.NSpecial]!,
+    [MoveId.DSmash]: A(CROUCH, SPREAD_LOW),
     [MoveId.DownSpecial]: A(CROUCH, ATTACKS[MoveId.USmash]!.strike[0]!),
   },
   Kestrel: {
@@ -171,17 +190,29 @@ const CHAR_ATTACKS: Record<string, Record<number, AttackAnim>> = {
       P({ torso: 34, head: -8, armF: [-50, 20], armB: [-70, 20], legF: [62, 0], legB: [-15, -70] }),
     ),
     [MoveId.DownSpecial]: ATTACKS[MoveId.DAir]!,
+    [MoveId.FSmash]: ATTACKS[MoveId.SideSpecial]!,
+    [MoveId.USmash]: A(CROUCH, ARC_FRONT, ARC_TOP, ARC_BACK),
+    [MoveId.DSmash]: A(CROUCH, SPLITS),
   },
   Lumen: {
     [MoveId.SideSpecial]: ATTACKS[MoveId.NSpecial]!,
     [MoveId.DownSpecial]: A(GUARD, P({ torso: -8, head: -12, armF: [125, 0], armB: [-125, 0], legF: [30, -10], legB: [-30, -10] })),
+    [MoveId.DSmash]: A(GUARD, SPREAD_LOW),
   },
   Basalt: {
-    [MoveId.NSpecial]: ATTACKS[MoveId.USmash]!,
+    [MoveId.NSpecial]: A(OVERHEAD, SLAM),
     [MoveId.SideSpecial]: A(DASH, SHOULDER_CHARGE),
-    [MoveId.DownSpecial]: A(OVERHEAD, SLAM),
+    [MoveId.DownSpecial]: ATTACKS[MoveId.DAir]!,
+    [MoveId.USmash]: A(CROUCH, ARC_TOP),
+    [MoveId.DSmash]: A(OVERHEAD, { ...SPREAD_LOW, torso: 38, armF: [40, 0], armB: [-40, 0] }),
+  },
+  Rook: {
+    [MoveId.FSmash]: A(KNEE_UP, BIG_KICK),
   },
   Sable: {
+    [MoveId.FSmash]: A(CLEAVE_UP, ARC_TOP, CLEAVE_DOWN),
+    [MoveId.USmash]: A(CROUCH, ARC_FRONT, ARC_TOP, ARC_BACK),
+    [MoveId.DSmash]: A(CROUCH, { ...SPREAD_LOW, torso: 34, armF: [80, 0], armB: [-80, 0] }),
     [MoveId.SideSpecial]: ATTACKS[MoveId.FSmash]!,
     [MoveId.DownSpecial]: A(
       P({ torso: -6, armF: [-40, 30], armB: [20, 40], legF: [30, -30], legB: [-30, -10] }),

@@ -1,6 +1,6 @@
 import type { Look } from './skeleton';
 
-export type ProjectileStyle = 'gust' | 'pebble' | 'dart' | 'orb' | 'crescent';
+export type ProjectileStyle = 'gust' | 'pebble' | 'dart' | 'orb' | 'crescent' | 'gauntlet';
 
 export interface FighterLook extends Look {
   /** Outfit color, and the one used instead when an earlier player slot picked the same fighter. */
@@ -31,7 +31,7 @@ export const LOOKS: readonly FighterLook[] = [
     // Brick, the knight: broad; great helm with a plume, plate, tabard, kite shield.
     thigh: 15, shin: 14, torso: 22, upperArm: 14, forearm: 13, headR: 8.5, neck: 2, limbW: 10, torsoW: 22,
     skin: '#c98e64', hair: '#3a2a20', accent: '#e8c547', costume: 'knight', trim: '#b9c0c7',
-    body: '#8e2a26', alt: '#2f4f86',
+    body: '#8e2a26', alt: '#2f4f86', projectile: 'gauntlet',
     title: 'The Iron Knight',
     blurb: 'Heavy, slow and hard-hitting; hard to launch.',
   },

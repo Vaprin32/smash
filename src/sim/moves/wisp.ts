@@ -1,5 +1,5 @@
 import { px } from '../fixed';
-import { grabbox, hitbox, launch, MoveId, type MoveDef } from './types';
+import { grabbox, hitbox, launch, MoveId, platformPillar, type MoveDef } from './types';
 
 // Wisp: fast startup, low damage, low knockback. Pixel units; frames are 1-based.
 // Angles are relative to Wisp's facing (0 forward, 90 up, 180 backward).
@@ -46,29 +46,28 @@ const moves: Record<number, MoveDef> = {
 
   // --- Smash attacks (K on the ground; hold to charge) ---
   [MoveId.FSmash]: {
-    name: 'Forward Smash',
+    // A planted two-handed palm of wind: strongest up close.
+    name: 'Gale Palm',
     total: 46,
     chargeFrame: 8,
-    impulses: [{ frame: 10, vx: px(2) }],
     hitboxes: [
       hitbox({ frames: [12, 14], x: 44, y: -36, r: 22, damage: 15, kb: 6, growth: 15, angle: 38 }),
       hitbox({ frames: [15, 17], x: 38, y: -34, r: 18, damage: 10, kb: 4, growth: 9, angle: 40 }),
     ],
   },
   [MoveId.USmash]: {
-    name: 'Up Smash',
+    name: 'Whirlwind',
     total: 44,
     chargeFrame: 6,
     hitboxes: [
       hitbox({ frames: [9, 12], x: 2, y: -72, r: 26, damage: 14, kb: 6, growth: 14, angle: 88 }),
       hitbox({ frames: [9, 12], x: 2, y: -40, r: 20, damage: 10, kb: 4.5, growth: 9, angle: 85 }),
-      // A pillar straight up through the platform overhead (115 px above the stage), same height for everyone.
-      hitbox({ frames: [9, 12], x: 0, y: -126, r: 24, damage: 11, kb: 6, growth: 12, angle: 90, fixed: true }),
+      platformPillar([9, 12], 11),
     ],
   },
   [MoveId.DSmash]: {
     // Hits in front, then behind.
-    name: 'Down Smash',
+    name: 'Sweeping Gust',
     total: 48,
     chargeFrame: 5,
     hitboxes: [

@@ -149,6 +149,14 @@ export function hitbox(h: {
   return out;
 }
 
+/**
+ * Up smash's reach through the platform overhead: a fixed-size hitbox 102-150 px
+ * above the feet for every fighter, so anyone standing on the platform above gets hit.
+ */
+export function platformPillar(frames: [number, number], damage: number): HitboxDef {
+  return hitbox({ frames, x: 0, y: -126, r: 24, damage, kb: 6, growth: 12, angle: 90, fixed: true });
+}
+
 /** Knockback-only hit (throws, projectiles) in pixel units. */
 export function launch(damage: number, kb: number, growth: number, angle: number, r = 0): HitboxDef {
   return hitbox({ frames: [0, 0], x: 0, y: 0, r, damage, kb, growth, angle });

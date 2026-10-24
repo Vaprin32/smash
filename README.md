@@ -77,22 +77,25 @@ Every solid block's top corners are ledges.
 
 ## Fighters
 
-| Fighter | Archetype | Notes |
-|---|---|---|
-| Wisp | fast, light, floaty | weak hits, Wind Bolt projectile, counter |
-| Brick | heavy, slow, hard-hitting | Haymaker, Bull Rush, Ground Pound |
-| Pip | tiny featherweight | three air jumps, Pebble Toss, Spring (extra jump) |
-| Kestrel | fast-faller rushdown | Feather Dart, Dive Kick, Plummet spike |
-| Lumen | floaty zoner | slow strong Lumen Orb, Light Lance tip, Flare |
-| Basalt | giant super-heavyweight | slowest and strongest, worst recovery |
-| Sable | long reach (sword) | disjointed normals, tipper Lunge, Whirl Slash |
-| Rook | all-rounder | Palm Burst, Spin Kick, Riposte counter |
+| Fighter | Archetype | Smash attacks (K: forward / up / down) | Specials (I: neutral, side, up, down) |
+|---|---|---|---|
+| Wisp | fast, light, floaty | Gale Palm / Whirlwind / Sweeping Gust | Wind Bolt, Gust Dash, Updraft, Mirror Guard (counter) |
+| Brick | heavy, slow, hard-hitting | Gauntlet Hook / Helm Bash / Tremor Stomp | Gauntlet Toss, Bull Rush, Rocket Fist, Ground Pound |
+| Pip | tiny featherweight, three air jumps | Sling Snap / Sky Shot / Pebble Scatter | Pebble Toss, Tumble, Pinwheel, Spring (extra jump) |
+| Kestrel | fast-faller rushdown | Talon Thrust / Wing Flare / Spur Sweep | Feather Dart, Dive Kick, Skyward, Plummet (spike) |
+| Lumen | floaty zoner | Censer Swing / Halo / Twin Pillars | Lumen Orb, Light Lance (tipper), Ascend, Flare |
+| Basalt | giant super-heavyweight, worst recovery | Boulder Fist / Lava Crown / Twin Quake | Eruption, Landslide, Magma Leap, Seismic Slam |
+| Sable | long reach (sword) | Overhead Cleave / Rising Arc / Ankle Sweep | Crescent Wave, Lunge (tipper), Rising Blade, Whirl Slash |
+| Rook | all-rounder | Heavy Kick / Rising Palm / Sweep Kick | Palm Burst, Spin Kick, Rising Uppercut, Riposte (counter) |
+
+Every fighter's smash attacks and specials are their own, and no special repeats one of that
+fighter's smash attacks (`tests/roster.test.ts` checks both).
 
 The look is medieval: a moonlit night over a castle, mountains, a forest and a village, a stone rampart with torches and ivy, oak and gold menus, heraldic HUD shields. The scenery is in `src/render/scenery.ts` (static layers are painted once from a fixed seed, then drawn with parallax), figures and costumes in `src/render/skeleton.ts`, palette and menu pieces in `src/render/theme.ts`; each fighter's title (the Iron Knight, the Cleric, ...) is in `src/render/looks.ts`.
 
 Each fighter's stats live in `src/sim/fighters/<name>.ts`. Moves are in `src/sim/moves/<name>.ts`:
-a tuning line (frames / size / reach / damage / knockback, relative to Wisp's moveset)
-plus that fighter's hand-written specials. Looks (proportions, colors, costume) are in
+a tuning line (frames / size / reach / damage / knockback) that scales Wisp's jabs, tilts,
+aerials and throws, plus that fighter's hand-written smash attacks and specials. Looks (proportions, colors, costume) are in
 `src/render/looks.ts`.
 
 ## Controls
