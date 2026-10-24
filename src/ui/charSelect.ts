@@ -8,8 +8,6 @@ import { tint } from '../render/skeleton';
 import { FIGHTERS } from '../sim/fighters';
 import { ONE } from '../sim/fixed';
 import { MoveId } from '../sim/moves/types';
-import { DEFAULT_STOCKS } from '../sim/rules';
-import type { MatchSetup } from '../sim/state';
 import type { App, Mode, Screen } from './app';
 import { beginLayout, drawBackdrop, drawFigure, panel, roundRect, text, type View } from './draw';
 import { CharSelectModel, GRID_COLS } from './menuModel';
@@ -30,7 +28,7 @@ const SUBTITLES: Record<Mode, string> = {
 };
 /** Online: resend our cursor this often, so the other player's view can't stay stale. */
 const CURSOR_RESEND_TICKS = 30;
-/** Online: once both are locked in, the host starts after this many ticks. */
+/** Online: once both are locked in, the host goes on to stage select after this many ticks. */
 const ONLINE_START_TICKS = 45;
 const NO_PRESS: MenuPress = { up: false, down: false, left: false, right: false, confirm: false, back: false };
 
@@ -128,18 +126,10 @@ export class CharSelectScreen implements Screen {
     }
 
     this.readyTicks = this.model.ready ? this.readyTicks + 1 : 0;
+    // The host picks the stage; the guest waits here for the start.
     if (link.isHost && this.readyTicks === ONLINE_START_TICKS) {
-      const setup: MatchSetup = {
-        seed: (Math.random() * 0x100000000) >>> 0,
-        stageId: 0,
-        chars: this.model.cursors.map((cur) => cur.index),
-        stocks: DEFAULT_STOCKS,
-      };
-      const match = link.nextMatch();
-      link.send({ t: 'start', match, setup });
-      sfx.go();
-      // Our start message takes half a round trip to arrive: start our countdown that much later.
-      this.app.startOnlineMatch(setup, match, Math.max(0, link.rttMs / 2));
+      sfx.select();
+      this.app.toStageSelect('online', this.model.cursors.map((cur) => cur.index));
     }
   }
 
@@ -165,7 +155,7 @@ export class CharSelectScreen implements Screen {
         break;
       case 'start':
         sfx.go();
-        this.app.startMatch(this.mode, this.model.cursors.map((cur) => cur.index));
+        this.app.toStageSelect(this.mode, this.model.cursors.map((cur) => cur.index));
         break;
     }
   }
@@ -225,7 +215,9 @@ export class CharSelectScreen implements Screen {
     const footY = 742;
     if (this.link) {
       const footer = this.model.ready
-        ? 'Both ready! Starting…'
+        ? this.link.isHost
+          ? 'Both ready! Choosing the stage…'
+          : 'Both ready! P1 is choosing the stage…'
         : this.model.cursors[this.link.slot]!.locked
           ? 'Waiting for the other player… · Special: undo · Esc: leave the room'
           : 'Attack / Jump: lock in · Esc: leave the room';

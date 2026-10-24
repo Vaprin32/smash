@@ -24,6 +24,8 @@ export interface MatchResult {
   kos: number[];
   damageDealt: number[];
   seconds: number;
+  /** Where it was played (rematches stay there). */
+  stageId: number;
 }
 
 /**
@@ -69,6 +71,7 @@ export function matchResult(mode: Mode, chars: readonly number[], final: MatchSt
     kos: [...stats.kos],
     damageDealt: [...stats.damageDealt],
     seconds: Math.floor(final.frame / 60),
+    stageId: final.stageId,
   };
 }
 
@@ -126,7 +129,7 @@ export class ResultsScreen implements Screen {
   /** Host: once both asked, start the rematch (same fighters, new seed). */
   private maybeRematch(link: OnlineLink): void {
     if (!link.isHost || !this.wantRematch.every(Boolean)) return;
-    const setup: MatchSetup = { seed: (Math.random() * 0x100000000) >>> 0, stageId: 0, chars: this.result.chars, stocks: DEFAULT_STOCKS };
+    const setup: MatchSetup = { seed: (Math.random() * 0x100000000) >>> 0, stageId: this.result.stageId, chars: this.result.chars, stocks: DEFAULT_STOCKS };
     const match = link.nextMatch();
     link.send({ t: 'start', match, setup });
     this.app.startOnlineMatch(setup, match, Math.max(0, link.rttMs / 2));

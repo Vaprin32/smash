@@ -1,4 +1,5 @@
-import { px } from './fixed';
+import { idiv, px } from './fixed';
+import { isin, TRIG_ONE } from './trig';
 
 // Coordinates are fixed point. +x is right, +y is DOWN. The main stage's top surface is y = 0.
 
@@ -15,6 +16,8 @@ export interface Platform {
   left: number;
   right: number;
   top: number;
+  /** A moving platform swings this far each way (fixed point) over `period` frames, smoothly (sine). */
+  sway?: { dx: number; dy: number; period: number };
 }
 
 export interface SpawnPoint {
@@ -26,6 +29,10 @@ export interface SpawnPoint {
 
 export interface StageDef {
   name: string;
+  /** One line for stage select. */
+  blurb: string;
+  /** Look only: the time of day the scenery is painted in. */
+  theme: 'night' | 'dusk';
   blocks: readonly Block[];
   platforms: readonly Platform[];
   blast: { left: number; right: number; top: number; bottom: number };
@@ -44,7 +51,9 @@ export interface Surface {
 
 export const STAGES: readonly StageDef[] = [
   {
-    name: 'Driftwood Isle',
+    name: 'Moonlit Rampart',
+    blurb: 'Castle walls under the moon · three platforms',
+    theme: 'night',
     blocks: [{ left: px(-380), right: px(380), top: 0, bottom: px(70) }],
     platforms: [
       { left: px(-300), right: px(-140), top: px(-115) },
@@ -77,19 +86,69 @@ export const STAGES: readonly StageDef[] = [
       { x: px(260), y: px(-380) },
     ],
   },
+  {
+    name: 'Sunset Bridge',
+    blurb: 'A long stone bridge at dusk · a lift swings across the middle',
+    theme: 'dusk',
+    blocks: [{ left: px(-420), right: px(420), top: 0, bottom: px(46) }],
+    platforms: [
+      { left: px(-80), right: px(80), top: px(-125), sway: { dx: px(220), dy: 0, period: 600 } },
+      { left: px(-330), right: px(-210), top: px(-240) },
+      { left: px(210), right: px(330), top: px(-240) },
+    ],
+    blast: { left: px(-1200), right: px(1200), top: px(-950), bottom: px(620) },
+    spawns: [
+      [{ x: px(-200), y: 0, ground: 0 }],
+      [
+        { x: px(-200), y: 0, ground: 0 },
+        { x: px(200), y: 0, ground: 0 },
+      ],
+      [
+        { x: px(-280), y: 0, ground: 0 },
+        { x: px(280), y: 0, ground: 0 },
+        { x: 0, y: 0, ground: 0 },
+      ],
+      [
+        { x: px(-300), y: 0, ground: 0 },
+        { x: px(300), y: 0, ground: 0 },
+        { x: px(-100), y: 0, ground: 0 },
+        { x: px(100), y: 0, ground: 0 },
+      ],
+    ],
+    respawns: [
+      { x: px(-120), y: px(-400) },
+      { x: px(120), y: px(-400) },
+      { x: px(-300), y: px(-400) },
+      { x: px(300), y: px(-400) },
+    ],
+  },
 ];
+
+/** Platform `i` where it is at `frame` (moving platforms follow their sway; the rest never move). */
+export function platformAt(stage: StageDef, i: number, frame: number): Platform {
+  const p = stage.platforms[i]!;
+  if (!p.sway) return p;
+  const { dx, dy, period } = p.sway;
+  // Sine at 1/16° steps (interpolating the whole-degree table) so the motion is smooth.
+  const a16 = idiv((frame % period) * 360 * 16, period);
+  const deg = a16 >> 4;
+  const s = isin(deg) + (((isin(deg + 1) - isin(deg)) * (a16 & 15)) >> 4);
+  const ox = idiv(dx * s, TRIG_ONE);
+  const oy = idiv(dy * s, TRIG_ONE);
+  return { left: p.left + ox, right: p.right + ox, top: p.top + oy };
+}
 
 /**
  * Ground indices: 0..blocks.length-1 are block tops, then platforms follow.
  * -1 means airborne.
  */
-export function surfaceOf(stage: StageDef, ground: number): Surface {
+export function surfaceOf(stage: StageDef, ground: number, frame = 0): Surface {
   const nb = stage.blocks.length;
   if (ground < nb) {
     const b = stage.blocks[ground]!;
     return { left: b.left, right: b.right, top: b.top, passThrough: false };
   }
-  const p = stage.platforms[ground - nb]!;
+  const p = platformAt(stage, ground - nb, frame);
   return { left: p.left, right: p.right, top: p.top, passThrough: true };
 }
 

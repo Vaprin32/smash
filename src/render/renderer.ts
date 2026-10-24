@@ -37,17 +37,17 @@ export function fighterColor(chars: readonly number[], slot: number): string {
 export function drawWorld(ctx: CanvasRenderingContext2D, state: MatchState, cam: Camera, w: number, h: number, labels: readonly string[] = []): void {
   const t = performance.now();
   const stage = STAGES[state.stageId]!;
-  drawBackground(ctx, cam, w, h, t);
+  drawBackground(ctx, cam, w, h, t, undefined, stage.theme);
   cam.apply(ctx, w, h);
-  drawStageArt(ctx, stage, t, SLOT_COLORS);
+  drawStageArt(ctx, stage, t, SLOT_COLORS, state.frame);
   for (const f of state.fighters) {
     if (f.action === Action.KO || f.action === Action.Out) continue;
-    drawGroundShadow(ctx, stage, f.x / ONE, f.y / ONE, FIGHTERS[f.charId]!.stats.width / ONE + 16);
+    drawGroundShadow(ctx, stage, f.x / ONE, f.y / ONE, FIGHTERS[f.charId]!.stats.width / ONE + 16, state.frame);
   }
   const chars = state.fighters.map((f) => f.charId);
   state.fighters.forEach((f, i) => drawFighter(ctx, state, f, i, fighterColor(chars, i), labels[i] || `P${i + 1}`));
   state.fighters.forEach((f, i) => drawProjectile(ctx, f, fighterColor(chars, i)));
-  drawStageLights(ctx, stage, t);
+  drawStageLights(ctx, t);
 }
 
 function drawFighter(ctx: CanvasRenderingContext2D, state: MatchState, f: FighterState, slot: number, color: string, label: string): void {

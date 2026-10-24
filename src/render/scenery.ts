@@ -7,7 +7,7 @@
 // parallax; flames, embers, flags, mist and lantern light are drawn live.
 
 import { ONE } from '../sim/fixed';
-import type { StageDef } from '../sim/stage';
+import { platformAt, type StageDef } from '../sim/stage';
 
 /** What the background needs from a camera (world point at the screen center, and zoom). */
 export interface View3 {
@@ -84,18 +84,21 @@ const STARS = (() => {
   return Array.from({ length: 240 }, () => ({ x: r(), y: r() * r() * 0.7, s: 0.4 + r() * r() * 1.6, tw: r() < 0.25 ? r() * TAU : -1 }));
 })();
 
-function drawSky(ctx: Ctx, cam: View3, w: number, h: number, time: number, moon: readonly [number, number]): void {
+/** Sky gradients per time of day. */
+const SKIES: Record<Theme, [number, string][]> = {
+  night: [[0, '#070b22'], [0.42, '#1b1d44'], [0.68, '#4a3156'], [0.86, '#8a4c55'], [1, '#c47b52']],
+  dusk: [[0, '#1c1840'], [0.3, '#4a2c5e'], [0.55, '#a14a5c'], [0.75, '#e47a4e'], [0.9, '#f6b062'], [1, '#ffd48a']],
+};
+
+function drawSky(ctx: Ctx, cam: View3, w: number, h: number, time: number, moon: readonly [number, number], theme: Theme): void {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   const sky = ctx.createLinearGradient(0, 0, 0, h);
-  sky.addColorStop(0, '#070b22');
-  sky.addColorStop(0.42, '#1b1d44');
-  sky.addColorStop(0.68, '#4a3156');
-  sky.addColorStop(0.86, '#8a4c55');
-  sky.addColorStop(1, '#c47b52');
+  for (const [at, color] of SKIES[theme]) sky.addColorStop(at, color);
   ctx.fillStyle = sky;
   ctx.fillRect(0, 0, w, h);
 
   const u = Math.min(w, h) / 900;
+  if (theme === 'dusk') return drawSun(ctx, cam, w, h, u);
   ctx.fillStyle = '#fff6e6';
   for (const st of STARS) {
     const a = st.tw >= 0 ? 0.45 + 0.55 * Math.sin(time * 0.003 + st.tw) : 0.75;
@@ -126,6 +129,34 @@ function drawSky(ctx: Ctx, cam: View3, w: number, h: number, time: number, moon:
     ctx.arc(mx + dx * mr, my + dy * mr, rr * mr, 0, TAU);
     ctx.fill();
   }
+}
+
+/** A big low sun with a warm glow, and a few early stars high up. */
+function drawSun(ctx: Ctx, cam: View3, w: number, h: number, u: number): void {
+  ctx.fillStyle = '#fff6e6';
+  for (const st of STARS) {
+    if (st.y > 0.25) continue;
+    ctx.globalAlpha = 0.5 * (1 - st.y * 4);
+    ctx.fillRect(st.x * w - cam.x * cam.zoom * 0.01, st.y * h, st.s * u * 1.2, st.s * u * 1.2);
+  }
+  ctx.globalAlpha = 1;
+  const sx = w * 0.3 - cam.x * cam.zoom * 0.02, sy = h * 0.62, sr = 70 * u;
+  const glow = ctx.createRadialGradient(sx, sy, sr * 0.6, sx, sy, sr * 7);
+  glow.addColorStop(0, 'rgba(255,214,140,0.55)');
+  glow.addColorStop(0.4, 'rgba(255,150,90,0.18)');
+  glow.addColorStop(1, 'rgba(255,150,90,0)');
+  ctx.fillStyle = glow;
+  ctx.beginPath();
+  ctx.arc(sx, sy, sr * 7, 0, TAU);
+  ctx.fill();
+  const disc = ctx.createRadialGradient(sx, sy - sr * 0.3, sr * 0.1, sx, sy, sr);
+  disc.addColorStop(0, '#fffbe8');
+  disc.addColorStop(0.7, '#ffd77a');
+  disc.addColorStop(1, '#ffb050');
+  ctx.fillStyle = disc;
+  ctx.beginPath();
+  ctx.arc(sx, sy, sr, 0, TAU);
+  ctx.fill();
 }
 
 // --- Clouds ------------------------------------------------------------------
@@ -582,8 +613,18 @@ function drawMist(ctx: Ctx, cam: View3, w: number, h: number, depth: number, y: 
 }
 
 /** Everything behind the stage, in screen space. `moon`: its position as fractions of the screen. */
-export function drawBackground(ctx: Ctx, cam: View3, w: number, h: number, time: number, moon: readonly [number, number] = [0.78, 0.17]): void {
-  drawSky(ctx, cam, w, h, time, moon);
+export type Theme = 'night' | 'dusk';
+
+export function drawBackground(
+  ctx: Ctx,
+  cam: View3,
+  w: number,
+  h: number,
+  time: number,
+  moon: readonly [number, number] = [0.78, 0.17],
+  theme: Theme = 'night',
+): void {
+  drawSky(ctx, cam, w, h, time, moon, theme);
   drawClouds(ctx, cam, w, h, time);
   const [far, near] = mountainTiles();
   drawTiled(ctx, cam, w, h, 0.06, far!, -900);
@@ -994,10 +1035,86 @@ function drawLantern(ctx: Ctx, x: number, y: number, time: number): void {
 }
 
 /** The stage: blocks, platforms, banners (one per player color) and torches, in world space. Their light comes later. */
-export function drawStageArt(ctx: Ctx, stage: StageDef, time: number, bannerColors: readonly string[]): void {
+/** Stone piers under a bridge deck, going down out of sight, with arches between them. */
+function paintPiers(left: number, right: number, top: number): Sprite {
+  const depth = 520;
+  const bw = right - left;
+  const { c, g } = canvas(bw + PAD * 2, depth + PAD, 2);
+  g.translate(-(left - PAD), -top);
+  const r = rng(77);
+  const piers = [left + bw * 0.16, left + bw * 0.5, left + bw * 0.84];
+  const pw = 54;
+  for (const px0 of piers) {
+    const grad = g.createLinearGradient(px0 - pw / 2, 0, px0 + pw / 2, 0);
+    grad.addColorStop(0, '#3a302c');
+    grad.addColorStop(0.45, '#6a5c52');
+    grad.addColorStop(1, '#2c2522');
+    g.fillStyle = grad;
+    g.fillRect(px0 - pw / 2, top, pw, depth);
+    for (let y = top + 6; y < top + depth; y += 13) {
+      g.fillStyle = 'rgba(0,0,0,0.22)';
+      g.fillRect(px0 - pw / 2, y, pw, 1.2);
+      const off = ((y / 13) | 0) % 2 ? pw / 3 : (2 * pw) / 3;
+      g.fillRect(px0 - pw / 2 + off, y, 1.2, 13);
+    }
+    for (let k = 0; k < 40; k++) {
+      g.fillStyle = r() < 0.5 ? 'rgba(0,0,0,0.2)' : 'rgba(255,230,200,0.08)';
+      g.fillRect(px0 - pw / 2 + r() * pw, top + r() * depth, 1.5, 1.5);
+    }
+  }
+  // Arches between the piers.
+  for (let i = 0; i < piers.length - 1; i++) {
+    const a = piers[i]! + pw / 2, b = piers[i + 1]! - pw / 2, mid = (a + b) / 2, rad = (b - a) / 2;
+    g.fillStyle = '#4b3f39';
+    g.beginPath();
+    g.moveTo(a, top);
+    g.lineTo(b, top);
+    g.lineTo(b, top + 30);
+    g.arc(mid, top + 30 + rad * 0.15, rad, 0, Math.PI, true);
+    g.closePath();
+    g.fill();
+    g.strokeStyle = 'rgba(0,0,0,0.35)';
+    g.lineWidth = 2;
+    g.beginPath();
+    g.arc(mid, top + 30 + rad * 0.15, rad, Math.PI, 0);
+    g.stroke();
+  }
+  // Fade into the haze below.
+  const fade = g.createLinearGradient(0, top + 80, 0, top + depth);
+  fade.addColorStop(0, 'rgba(120,70,80,0)');
+  fade.addColorStop(1, 'rgba(120,70,80,0.9)');
+  g.globalCompositeOperation = 'source-atop';
+  g.fillStyle = fade;
+  g.fillRect(left - PAD, top, bw + PAD * 2, depth);
+  return { c, x: left - PAD, y: top, w: bw + PAD * 2, h: depth + PAD };
+}
+
+const pierArt = new Map<string, Sprite>();
+
+/** The chains a swinging lift hangs from, running up out of sight. */
+function drawLiftChains(ctx: Ctx, x: number, y: number, w: number): void {
+  ctx.strokeStyle = '#2b2522';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([4, 3]);
+  for (const cx of [x + 14, x + w - 14]) {
+    ctx.beginPath();
+    ctx.moveTo(cx, y);
+    ctx.lineTo(cx, y - 700);
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+}
+
+export function drawStageArt(ctx: Ctx, stage: StageDef, time: number, bannerColors: readonly string[], frame = 0): void {
   const torches: { x: number; y: number }[] = [];
   for (const b of stage.blocks) {
     const l = b.left / ONE, t = b.top / ONE, rr = b.right / ONE, bt = b.bottom / ONE;
+    if (stage.theme === 'dusk') {
+      const pkey = `${l},${rr},${bt}`;
+      let piers = pierArt.get(pkey);
+      if (!piers) pierArt.set(pkey, (piers = paintPiers(l, rr, bt - 4)));
+      ctx.drawImage(piers.c, piers.x, piers.y, piers.w, piers.h);
+    }
     const key = `${l},${t},${rr},${bt}`;
     let art = blockArt.get(key);
     if (!art) blockArt.set(key, (art = paintBlock(l, t, rr, bt)));
@@ -1010,16 +1127,22 @@ export function drawStageArt(ctx: Ctx, stage: StageDef, time: number, bannerColo
       torches.push({ x: tx, y: t + 26 });
     }
   }
-  for (const p of stage.platforms) {
+  platformLights = [];
+  for (let i = 0; i < stage.platforms.length; i++) {
+    const p = platformAt(stage, i, frame);
     const l = p.left / ONE, t = p.top / ONE, pw = (p.right - p.left) / ONE;
+    if (stage.platforms[i]!.sway) drawLiftChains(ctx, l, t, pw);
     let art = platformArt.get(pw);
     if (!art) platformArt.set(pw, (art = paintPlatform(pw)));
     ctx.drawImage(art.c, l + art.x, t + art.y, art.w, art.h);
     drawLantern(ctx, l + pw / 2, t + 25, time);
+    platformLights.push({ x: l + pw / 2, y: t + 31 });
   }
   updateEmbers(time, torches);
   stageLights = torches;
 }
+
+let platformLights: { x: number; y: number }[] = [];
 
 let stageLights: { x: number; y: number }[] = [];
 
@@ -1027,7 +1150,7 @@ let stageLights: { x: number; y: number }[] = [];
  * Warm torch and lantern light, rising embers (world space, after the
  * fighters so it falls on them too).
  */
-export function drawStageLights(ctx: Ctx, stage: StageDef, time: number): void {
+export function drawStageLights(ctx: Ctx, time: number): void {
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
   for (const s of stageLights) {
@@ -1035,10 +1158,7 @@ export function drawStageLights(ctx: Ctx, stage: StageDef, time: number): void {
     light(ctx, s.x, s.y - 10, 110 * flick, 0.22);
     light(ctx, s.x, s.y - 10, 26 * flick, 0.5);
   }
-  for (const p of stage.platforms) {
-    const x = (p.left + p.right) / 2 / ONE, y = p.top / ONE + 31;
-    light(ctx, x, y, 46, 0.25);
-  }
+  for (const p of platformLights) light(ctx, p.x, p.y, 46, 0.25);
   for (const e of embers) {
     const a = Math.min(1, e.life / 600);
     ctx.fillStyle = `rgba(255,${150 + Math.round(a * 80)},70,${(a * 0.9).toFixed(3)})`;
@@ -1048,13 +1168,14 @@ export function drawStageLights(ctx: Ctx, stage: StageDef, time: number): void {
 }
 
 /** A soft shadow on the highest surface under a fighter whose feet are at (x, y). */
-export function drawGroundShadow(ctx: Ctx, stage: StageDef, x: number, y: number, width: number): void {
+export function drawGroundShadow(ctx: Ctx, stage: StageDef, x: number, y: number, width: number, frame = 0): void {
   let ground = Infinity;
   for (const b of stage.blocks) {
     const l = b.left / ONE, rr = b.right / ONE, t = b.top / ONE;
     if (x >= l && x <= rr && t >= y - 1) ground = Math.min(ground, t);
   }
-  for (const p of stage.platforms) {
+  for (let i = 0; i < stage.platforms.length; i++) {
+    const p = platformAt(stage, i, frame);
     const l = p.left / ONE, rr = p.right / ONE, t = p.top / ONE;
     if (x >= l && x <= rr && t >= y - 1) ground = Math.min(ground, t);
   }

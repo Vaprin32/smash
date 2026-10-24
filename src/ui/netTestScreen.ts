@@ -79,7 +79,7 @@ export class NetTestScreen implements Screen {
 
   private restart(): void {
     this.keepReplay();
-    this.setup = { seed: (Math.random() * 0x100000000) >>> 0, stageId: 0, chars: this.chars, stocks: DEFAULT_STOCKS };
+    this.setup = { seed: (Math.random() * 0x100000000) >>> 0, stageId: this.app.stage, chars: this.chars, stocks: DEFAULT_STOCKS };
     this.preview = createMatch(this.setup);
     this.net = null;
     this.sessions = [];

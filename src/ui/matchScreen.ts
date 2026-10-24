@@ -44,7 +44,7 @@ export class MatchScreen implements Screen {
 
   private restart(): void {
     this.keepReplay();
-    const setup: MatchSetup = { seed: (Math.random() * 0x100000000) >>> 0, stageId: 0, chars: this.chars, stocks: DEFAULT_STOCKS };
+    const setup: MatchSetup = { seed: (Math.random() * 0x100000000) >>> 0, stageId: this.app.stage, chars: this.chars, stocks: DEFAULT_STOCKS };
     this.state = createMatch(setup);
     this.replay = newReplay(setup);
     this.view = new MatchView(this.app);

@@ -32,7 +32,7 @@ export function step(prev: MatchState, inputs: readonly InputBits[]): MatchState
   for (let i = 0; i < s.fighters.length; i++) {
     const f = s.fighters[i]!;
     const input = (inputs[i] ?? 0) | 0;
-    updateFighter(f, i, input, stage);
+    updateFighter(f, i, input, stage, s.frame + 1);
     f.prevInput = input;
   }
   grabLedges(s, stage, inputs);
@@ -43,7 +43,8 @@ export function step(prev: MatchState, inputs: readonly InputBits[]): MatchState
   return s;
 }
 
-function updateFighter(f: FighterState, slot: number, input: number, stage: StageDef): void {
+/** `frame` is the frame this step produces (where moving platforms are). */
+function updateFighter(f: FighterState, slot: number, input: number, stage: StageDef, frame: number): void {
   const def = FIGHTERS[f.charId]!;
   const pressed = input & ~f.prevInput;
 
@@ -122,7 +123,7 @@ function updateFighter(f: FighterState, slot: number, input: number, stage: Stag
   }
 
   if (isLedgeAction(f.action)) return; // placed by the ledge, not by physics
-  moveFighter(f, def, stage, input);
+  moveFighter(f, def, stage, input, frame);
   if (f.ground >= 0 && isStanding(f.action)) f.lastHitBy = -1;
 
   if (outsideBlastZone(f, stage)) {

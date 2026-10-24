@@ -3,7 +3,7 @@ import { Action, ACTION_NAMES } from '../sim/actions';
 import { activeHitboxes, isIntangible } from '../sim/combat';
 import { FIGHTERS } from '../sim/fighters';
 import { ONE } from '../sim/fixed';
-import { STAGES } from '../sim/stage';
+import { platformAt, STAGES } from '../sim/stage';
 import { hashState, type MatchState } from '../sim/state';
 import type { Camera } from './camera';
 
@@ -31,7 +31,8 @@ export function drawDebugWorld(ctx: CanvasRenderingContext2D, state: MatchState,
   for (const b of stage.blocks) {
     ctx.strokeRect(b.left / ONE, b.top / ONE, (b.right - b.left) / ONE, (b.bottom - b.top) / ONE);
   }
-  for (const p of stage.platforms) {
+  for (let i = 0; i < stage.platforms.length; i++) {
+    const p = platformAt(stage, i, state.frame);
     ctx.beginPath();
     ctx.moveTo(p.left / ONE, p.top / ONE);
     ctx.lineTo(p.right / ONE, p.top / ONE);

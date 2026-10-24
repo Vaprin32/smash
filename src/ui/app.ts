@@ -20,6 +20,7 @@ import { OnlineLobbyScreen, type LobbyKind } from './onlineLobby';
 import { OnlineMatchScreen } from './onlineMatch';
 import { ReplayScreen } from './replayScreen';
 import { ResultsScreen, type MatchResult } from './results';
+import { StageSelectScreen } from './stageSelect';
 
 /**
  * Versus CPU (player 1 against 1-3 computer players, everyone for
@@ -58,6 +59,8 @@ export class App {
   debug = false;
   lastMatch: LastMatch | null = null;
   cpu: CpuSettings = { opponents: 1, level: DEFAULT_CPU_LEVEL };
+  /** Index into STAGES picked last (kept for rematches and the next stage select). */
+  stage = 0;
   /** The online room we are in, from the lobby until someone leaves. */
   online: OnlineLink | null = null;
 
@@ -132,6 +135,11 @@ export class App {
     this.go(new CharSelectScreen(this, mode, chars), layoutFor(mode));
   }
 
+  toStageSelect(mode: Mode, chars: readonly number[]): void {
+    this.go(new StageSelectScreen(this, mode, chars), 'solo');
+  }
+
+  /** Start a local match (or the netcode test) on `stage`. */
   startMatch(mode: Mode, chars: readonly number[]): void {
     this.go(mode === 'netTest' ? new NetTestScreen(this, chars) : new MatchScreen(this, mode, chars), layoutFor(mode));
   }

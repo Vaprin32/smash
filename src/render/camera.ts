@@ -36,7 +36,12 @@ export class Camera {
       include(b.left / ONE, b.top / ONE);
       include(b.right / ONE, b.bottom / ONE);
     }
-    for (const p of stage.platforms) include(p.left / ONE, p.top / ONE);
+    for (const p of stage.platforms) {
+      // A moving platform's whole path, so the camera doesn't follow it around.
+      const dx = p.sway?.dx ?? 0, dy = p.sway?.dy ?? 0;
+      include((p.left - dx) / ONE, (p.top - dy) / ONE);
+      include((p.right + dx) / ONE, (p.top + dy) / ONE);
+    }
     for (const f of state.fighters) {
       if (f.action === Action.KO || f.action === Action.Out) continue;
       include(f.x / ONE, f.y / ONE);

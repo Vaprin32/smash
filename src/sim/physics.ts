@@ -5,18 +5,23 @@ import { Action, isGroundFree, setAction } from './actions';
 import type { FighterDef } from './fighters/types';
 import { Btn } from './input';
 import { KNOCKDOWN_HITSTUN } from './rules';
-import { surfaceOf, type Block, type StageDef } from './stage';
+import { platformAt, surfaceOf, type Block, type StageDef } from './stage';
 import type { FighterState } from './state';
 
-/** `input` is the fighter's held buttons: holding down while falling passes through platforms. */
-export function moveFighter(f: FighterState, def: FighterDef, stage: StageDef, input: number): void {
+/**
+ * `input` is the fighter's held buttons: holding down while falling passes
+ * through platforms. `frame` is the frame being simulated into (moving
+ * platforms are where they are at that frame, and carry whoever stands on them).
+ */
+export function moveFighter(f: FighterState, def: FighterDef, stage: StageDef, input: number, frame: number): void {
   const st = def.stats;
   const hw = st.width >> 1;
 
   if (f.ground >= 0) {
-    f.x += f.vx;
+    const was = surfaceOf(stage, f.ground, frame - 1);
+    const s = surfaceOf(stage, f.ground, frame);
+    f.x += f.vx + (s.left - was.left); // ride a moving platform
     resolveWallsX(f, hw, st.height, stage);
-    const s = surfaceOf(stage, f.ground);
     if (f.x >= s.left && f.x <= s.right) {
       f.y = s.top;
       f.vy = 0;
@@ -62,8 +67,9 @@ export function moveFighter(f: FighterState, def: FighterDef, stage: StageDef, i
   if (f.vy < 0 || f.dropTimer > 0 || fallsThrough(f, input)) return;
   const nb = stage.blocks.length;
   for (let i = 0; i < stage.platforms.length; i++) {
-    const p = stage.platforms[i]!;
-    if (prevY <= p.top && f.y >= p.top && f.x >= p.left && f.x <= p.right) {
+    const p = platformAt(stage, i, frame);
+    const prevTop = platformAt(stage, i, frame - 1).top;
+    if (prevY <= prevTop && f.y >= p.top && f.x >= p.left && f.x <= p.right) {
       land(f, nb + i, p.top, def);
       return;
     }

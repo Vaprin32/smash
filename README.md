@@ -61,6 +61,20 @@ falling off by itself, that Hard beats Normal and Normal beats Easy, that four C
 free-for-all to the end (and it replays exactly), and that a CPU is deterministic and never
 touches the state it reads.
 
+## Stages
+
+After character select comes stage select (online, the host picks; rematches stay on the same
+stage):
+
+| Stage | Layout |
+|---|---|
+| Moonlit Rampart | castle walls at night; three platforms (two low, one high) |
+| Sunset Bridge | a longer, thinner stone bridge at dusk; a lift swings across the middle on chains, carrying whoever stands on it, with two high platforms at the sides |
+
+Stages are data in `src/sim/stage.ts`. A platform with a `sway` moves smoothly back and forth; where
+it is depends only on the frame number, so moving platforms cost nothing in the rollback state.
+Every solid block's top corners are ledges.
+
 ## Fighters
 
 | Fighter | Archetype | Notes |
