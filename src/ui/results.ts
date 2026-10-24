@@ -5,7 +5,8 @@ import { Action } from '../sim/actions';
 import { FIGHTERS } from '../sim/fighters';
 import { DRAW, matchWinner } from '../sim/outcome';
 import { DEFAULT_STOCKS } from '../sim/rules';
-import type { MatchState } from '../sim/state';
+import type { OnlineLink } from '../net/online';
+import type { MatchSetup, MatchState } from '../sim/state';
 import type { App, Mode, Screen } from './app';
 import { beginLayout, drawBackdrop, drawFigure, drawMenu, panel, text, type View } from './draw';
 import { MenuList } from './menuModel';
@@ -81,9 +82,16 @@ const INPUT_DELAY = 45;
 const W = 1100;
 const H = 720;
 
+/** Online there is no replay here (it's in the main menu afterwards): both players stay on this screen. */
+const ONLINE_ITEMS = ['Rematch', 'Character select', 'Leave room'];
+
 export class ResultsScreen implements Screen {
-  private list = new MenuList(ITEMS.length);
+  private items: readonly string[];
+  private list: MenuList;
   private frame = 0;
+  /** Online: the room, and who has asked for a rematch. */
+  private link: OnlineLink | null;
+  private wantRematch = [false, false];
 
   /** `fromReplay`: back from watching the replay, so no input delay and the cursor stays put. */
   constructor(
@@ -91,9 +99,57 @@ export class ResultsScreen implements Screen {
     readonly result: MatchResult,
     fromReplay = false,
   ) {
+    this.link = result.mode === 'online' ? app.online : null;
+    this.items = this.link ? ONLINE_ITEMS : ITEMS;
+    this.list = new MenuList(this.items.length);
     if (fromReplay) {
       this.frame = INPUT_DELAY;
       this.list.index = WATCH_REPLAY;
+    }
+    if (this.link) this.listen(this.link);
+  }
+
+  private listen(link: OnlineLink): void {
+    link.listen((msg) => {
+      if (msg.t === 'rematch') {
+        this.wantRematch[1 - link.slot] = true;
+        this.app.sfx.select();
+        this.maybeRematch(link);
+      } else if (msg.t === 'select') {
+        this.app.toCharSelect('online', this.result.chars);
+      } else if (msg.t === 'start' && !link.isHost) {
+        this.app.startOnlineMatch(msg.setup, msg.match, 0);
+      }
+    });
+  }
+
+  /** Host: once both asked, start the rematch (same fighters, new seed). */
+  private maybeRematch(link: OnlineLink): void {
+    if (!link.isHost || !this.wantRematch.every(Boolean)) return;
+    const setup: MatchSetup = { seed: (Math.random() * 0x100000000) >>> 0, stageId: 0, chars: this.result.chars, stocks: DEFAULT_STOCKS };
+    const match = link.nextMatch();
+    link.send({ t: 'start', match, setup });
+    this.app.startOnlineMatch(setup, match, Math.max(0, link.rttMs / 2));
+  }
+
+  private tickOnline(link: OnlineLink): void {
+    const c = this.app.controls;
+    if (c.backKey) return this.app.leaveOnline();
+    const event = this.list.update([c.menu(0)], c.confirmKey || c.startButton, false);
+    if (event === 'move') this.app.sfx.move();
+    if (event !== 'choose') return;
+    this.app.sfx.select();
+    const item = this.items[this.list.index];
+    if (item === 'Rematch') {
+      if (this.wantRematch[link.slot]) return;
+      this.wantRematch[link.slot] = true;
+      link.send({ t: 'rematch' });
+      this.maybeRematch(link);
+    } else if (item === 'Character select') {
+      link.send({ t: 'select' });
+      this.app.toCharSelect('online', this.result.chars);
+    } else {
+      this.app.leaveOnline();
     }
   }
 
@@ -104,6 +160,7 @@ export class ResultsScreen implements Screen {
   tick(): void {
     this.frame++;
     if (this.frame < INPUT_DELAY) return;
+    if (this.link) return this.tickOnline(this.link);
     const c = this.app.controls;
     const r = this.result;
     const event = this.list.update([c.menu(0), c.menu(1)], c.confirmKey || c.startButton, c.backKey);
@@ -136,7 +193,16 @@ export class ResultsScreen implements Screen {
     if (r.chars.length <= 2) r.chars.forEach((charId, slot) => this.drawWide(ctx, charId, slot, t));
     else r.chars.forEach((charId, slot) => this.drawNarrow(ctx, charId, slot, t));
 
-    if (this.frame >= INPUT_DELAY) drawMenu(ctx, ITEMS, this.list.index, W / 2, 516, 320, 48);
+    if (this.frame >= INPUT_DELAY) drawMenu(ctx, this.items, this.list.index, W / 2, 516, 320, 48);
+    if (this.link) {
+      const me = this.link.slot, them = 1 - me;
+      const note = this.wantRematch[me]
+        ? `Waiting for ${this.label(them)} to accept the rematch…`
+        : this.wantRematch[them]
+          ? `${this.label(them)} wants a rematch!`
+          : `Online · room ${this.link.code} · you are ${this.label(me)}`;
+      text(ctx, note, W / 2, 700, { size: 17, bold: this.wantRematch[them], align: 'center', color: '#ffd166', outline: true });
+    }
   }
 
   private pose(slot: number) {

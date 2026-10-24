@@ -19,7 +19,16 @@ export class MainMenu implements Screen {
     private app: App,
     select?: string,
   ) {
-    this.items = ['Local Versus', 'Versus CPU', 'Training', 'Netcode test', ...(app.lastMatch ? ['Watch replay'] : []), 'Controls'];
+    this.items = [
+      'Local Versus',
+      'Versus CPU',
+      'Create Online Room',
+      'Join Online Room',
+      'Training',
+      'Netcode test',
+      ...(app.lastMatch ? ['Watch replay'] : []),
+      'Controls',
+    ];
     this.list = new MenuList(this.items.length);
     this.list.index = Math.max(0, this.items.indexOf(select ?? ''));
   }
@@ -37,6 +46,12 @@ export class MainMenu implements Screen {
         break;
       case 'Versus CPU':
         this.app.toCpuSetup();
+        break;
+      case 'Create Online Room':
+        this.app.toOnlineLobby('create');
+        break;
+      case 'Join Online Room':
+        this.app.toOnlineLobby('join');
         break;
       case 'Training':
         this.app.toCharSelect('training');
@@ -58,8 +73,9 @@ export class MainMenu implements Screen {
     const area = beginLayout(ctx, view, W, H);
 
     text(ctx, 'SMASH PROTOTYPE', W / 2, 130, { size: 64, bold: true, align: 'center', color: '#ffd166', outline: true });
-    text(ctx, 'Eight champions of the realm · local versus · rollback netcode', W / 2, 168, { size: 18, align: 'center', color: '#d9c49a' });
-    drawMenu(ctx, this.items, this.list.index, W / 2, 210, 340);
+    text(ctx, 'Eight champions of the realm · local and online versus · rollback netcode', W / 2, 168, { size: 18, align: 'center', color: '#d9c49a' });
+    // Rows shrink to stay clear of the roster's floor.
+    drawMenu(ctx, this.items, this.list.index, W / 2, 196, 340, Math.min(54, Math.floor(400 / this.items.length)));
 
     // The roster, lined up on a floor, facing the middle.
     const floorY = 610;

@@ -1,11 +1,15 @@
 import { CPU_LEVELS } from '../ai/levels';
+import type { MenuPress } from '../input/controls';
 import { keysSummary } from '../input/keyLabels';
+import type { OnlineLink } from '../net/online';
 import { idlePose } from '../render/animations';
 import { fighterColor, lookOf, slotColor } from '../render/renderer';
 import { tint } from '../render/skeleton';
 import { FIGHTERS } from '../sim/fighters';
 import { ONE } from '../sim/fixed';
 import { MoveId } from '../sim/moves/types';
+import { DEFAULT_STOCKS } from '../sim/rules';
+import type { MatchSetup } from '../sim/state';
 import type { App, Mode, Screen } from './app';
 import { beginLayout, drawBackdrop, drawFigure, panel, roundRect, text, type View } from './draw';
 import { CharSelectModel, GRID_COLS } from './menuModel';
@@ -17,13 +21,19 @@ const CELL_W = 150;
 const CELL_H = 160;
 const GAP = 14;
 const GRID_TOP = 84;
-const TITLES: Record<Mode, string> = { versus: 'Local Versus', cpu: 'Versus CPU', training: 'Training', netTest: 'Netcode Test' };
+const TITLES: Record<Mode, string> = { versus: 'Local Versus', cpu: 'Versus CPU', training: 'Training', netTest: 'Netcode Test', online: 'Online' };
 const SUBTITLES: Record<Mode, string> = {
   versus: 'Both players pick a fighter',
   cpu: "Pick your fighter, then each CPU's (they start on random fighters)",
   training: "Pick your fighter, then the CPU's",
   netTest: 'Both players pick a fighter · each then plays on their own machine, linked by a fake network',
+  online: 'Both players pick a fighter · the match starts once both are locked in',
 };
+/** Online: resend our cursor this often, so the other player's view can't stay stale. */
+const CURSOR_RESEND_TICKS = 30;
+/** Online: once both are locked in, the host starts after this many ticks. */
+const ONLINE_START_TICKS = 45;
+const NO_PRESS: MenuPress = { up: false, down: false, left: false, right: false, confirm: false, back: false };
 
 interface StatBar {
   label: string;
@@ -64,6 +74,10 @@ function cellRect(index: number): { x: number; y: number } {
 export class CharSelectScreen implements Screen {
   private model: CharSelectModel;
   private frame = 0;
+  /** Online: the room, what we last told the peer about our cursor, and ticks since both locked in. */
+  private link: OnlineLink | null;
+  private sent = '';
+  private readyTicks = 0;
 
   constructor(
     private app: App,
@@ -71,10 +85,68 @@ export class CharSelectScreen implements Screen {
     chars?: readonly number[],
   ) {
     this.model = new CharSelectModel(mode, FIGHTERS.length, chars ?? (mode === 'cpu' ? cpuStart(app.cpu.opponents) : [0, 1]));
+    this.link = mode === 'online' ? app.online : null;
+    if (this.link) this.listen(this.link);
+  }
+
+  private listen(link: OnlineLink): void {
+    link.listen((msg) => {
+      if (msg.t === 'cursor') {
+        const index = msg.index | 0;
+        if (index >= 0 && index < FIGHTERS.length) this.model.cursors[1 - link.slot] = { index, locked: msg.locked === true };
+      } else if (msg.t === 'start' && !link.isHost) {
+        this.app.sfx.go();
+        this.app.startOnlineMatch(msg.setup, msg.match, 0);
+      }
+    });
+  }
+
+  /** Online: drive our own cursor only, keep the peer posted, and (host) start once both are in. */
+  private tickOnline(link: OnlineLink): void {
+    const c = this.app.controls;
+    const sfx = this.app.sfx;
+    if (c.backKey) {
+      sfx.back();
+      return this.app.leaveOnline();
+    }
+    const mine = { ...c.menu(0) };
+    mine.confirm ||= c.confirmKey || c.startButton;
+    const presses = link.slot === 0 ? [mine, NO_PRESS] : [NO_PRESS, mine];
+    const event = this.model.update(presses, false, false);
+    if (event === 'move') sfx.move();
+    else if (event === 'lock') sfx.select();
+    else if (event === 'unlock') sfx.back();
+    else if (event === 'exit') {
+      sfx.back();
+      return this.app.leaveOnline();
+    }
+
+    const cur = this.model.cursors[link.slot]!;
+    const state = `${cur.index}:${cur.locked}`;
+    if (state !== this.sent || this.frame % CURSOR_RESEND_TICKS === 0) {
+      link.send({ t: 'cursor', index: cur.index, locked: cur.locked });
+      this.sent = state;
+    }
+
+    this.readyTicks = this.model.ready ? this.readyTicks + 1 : 0;
+    if (link.isHost && this.readyTicks === ONLINE_START_TICKS) {
+      const setup: MatchSetup = {
+        seed: (Math.random() * 0x100000000) >>> 0,
+        stageId: 0,
+        chars: this.model.cursors.map((cur) => cur.index),
+        stocks: DEFAULT_STOCKS,
+      };
+      const match = link.nextMatch();
+      link.send({ t: 'start', match, setup });
+      sfx.go();
+      // Our start message takes half a round trip to arrive: start our countdown that much later.
+      this.app.startOnlineMatch(setup, match, Math.max(0, link.rttMs / 2));
+    }
   }
 
   tick(): void {
     this.frame++;
+    if (this.link) return this.tickOnline(this.link);
     const c = this.app.controls;
     const sfx = this.app.sfx;
     switch (this.model.update([c.menu(0), c.menu(1)], c.confirmKey || c.startButton, c.backKey)) {
@@ -106,7 +178,8 @@ export class CharSelectScreen implements Screen {
     const chars = this.model.cursors.map((c) => c.index);
 
     text(ctx, TITLES[this.mode], W / 2, 46, { size: 34, bold: true, align: 'center', color: '#ffd166', outline: true });
-    text(ctx, SUBTITLES[this.mode], W / 2, 72, {
+    const room = this.link ? ` · room ${this.link.code}${this.link.rttMs >= 0 ? ` · ping ${Math.round(this.link.rttMs)} ms` : ''}` : '';
+    text(ctx, SUBTITLES[this.mode] + room, W / 2, 72, {
       size: 15,
       align: 'center',
       color: '#d9c49a',
@@ -151,7 +224,14 @@ export class CharSelectScreen implements Screen {
     });
 
     const footY = 742;
-    if (this.model.ready) {
+    if (this.link) {
+      const footer = this.model.ready
+        ? 'Both ready! Starting…'
+        : this.model.cursors[this.link.slot]!.locked
+          ? 'Waiting for the other player… · Special: undo · Esc: leave the room'
+          : 'Attack / Jump: lock in · Esc: leave the room';
+      text(ctx, footer, W / 2, footY, { size: this.model.ready ? 22 : 15, bold: this.model.ready, align: 'center', color: this.model.ready ? '#ffd166' : 'rgba(255,255,255,0.75)', outline: this.model.ready });
+    } else if (this.model.ready) {
       const pulse = 0.75 + 0.25 * Math.sin(t * 0.008);
       ctx.globalAlpha = pulse;
       text(ctx, 'Ready! Press Attack, Enter or Start to fight', W / 2, footY, { size: 22, bold: true, align: 'center', color: '#ffd166', outline: true });
@@ -245,10 +325,12 @@ export class CharSelectScreen implements Screen {
   }
 
   private deviceLine(slot: number): string {
+    if (this.link && slot !== this.link.slot) return 'The other player · online';
     if (this.mode === 'training' && slot === 1) return 'Stands still · chosen by P1';
     if (isCpuSlot(this.mode, slot)) return `${CPU_LEVELS[this.app.cpu.level]!.name} CPU · chosen by P1`;
-    const pads = this.app.controls.padsOf(slot).map((n) => `Pad ${n}`);
-    const keys = keysSummary(this.app.controls.keyboard.keysOf(slot));
+    const device = this.link ? 0 : slot; // online, this machine's player uses player 1's controls
+    const pads = this.app.controls.padsOf(device).map((n) => `Pad ${n}`);
+    const keys = keysSummary(this.app.controls.keyboard.keysOf(device));
     return [...(keys ? [`Keys: ${keys}`] : []), ...pads].join(' · ') || 'Connect a gamepad';
   }
 }

@@ -8,10 +8,11 @@ A browser platform fighter (TypeScript strict, Vite, Canvas 2D, no game framewor
 
 ```bash
 npm run dev          # Vite dev server, http://localhost:5173
-npm test             # Vitest, whole suite (~6 s)
+npm run server       # signaling server for online play, ws://localhost:8787 (Node runs server/*.ts directly)
+npm test             # Vitest, whole suite (~8 s)
 npx vitest run tests/cpu.test.ts        # one file
 npx vitest run -t "recovers"            # tests whose name matches
-npm run typecheck    # tsc --noEmit (covers src/ and tests/; noUnusedLocals/Parameters are on)
+npm run typecheck    # tsc --noEmit (covers src/, tests/ and server/; noUnusedLocals/Parameters are on)
 npm run build:html   # dist/index.html: one self-contained file (JS inlined, IIFE) that runs from file://
 npm run build        # typecheck + regular Vite build into dist/app (needs a server)
 ```
@@ -49,19 +50,19 @@ Everything rollback, replays and the CPU rely on comes from these rules. Break t
 ### Outside the sim
 
 - `main.ts` runs the fixed-timestep loop: a rAF accumulator, at most 5 sim ticks per displayed frame, `controls.poll()` before every tick.
-- `ui/app.ts` is the screen manager (`Screen` with `tick()` / `draw()` / optional `leave()`). Modes are `'versus' | 'cpu' | 'training' | 'netTest'`. `ui/matchView.ts` draws a match (world, effects, camera, HUD, F1 debug overlay) and is shared by live matches, replays and the netcode test. The camera is render-only, never sim state.
-- `input/bindings.ts` holds every keyboard layout (solo, versus P1/P2) and the gamepad mapping. Keys are physical `e.code` positions.
+- `ui/app.ts` is the screen manager (`Screen` with `tick()` / `draw()` / optional `leave()`). Modes are `'versus' | 'cpu' | 'training' | 'netTest' | 'online'`. A new screen is constructed before `go()` calls the old one's `leave()`, so state the next screen reads (e.g. `lastMatch` for the main menu's "Watch replay") must be set before navigating. `ui/matchView.ts` draws a match (world, effects, camera, HUD, F1 debug overlay) and is shared by live matches, replays and the netcode test. The camera is render-only, never sim state.
+- `input/bindings.ts` holds every keyboard layout (solo, versus P1/P2) and the gamepad mapping. Keys are physical `e.code` positions. `Keyboard` resolves left+right (and up+down) to the last-pressed key, and ignores key events from editable `<input>`s.
 - **CPU players (`src/ai/`) are just input sources.** `CpuPlayer` reads the `MatchState` (opponents delayed by its reaction frames) and returns a `Btn` bitmask, so replays record CPUs like humans. It must never mutate the state it reads. Its randomness is its own seeded xorshift. `predict.ts` is a cheap forward model of moves and physics, and all per-level numbers are in `levels.ts`.
 - Replays (`sim/replay.ts`) are setup + per-frame inputs + a `hashState` every 60 frames, and are JSON-safe.
 - Netcode (`src/net/`): `session.ts` is a GGPO-style rollback session (input delay, prediction by repeating the last remote input, 8-frame ring buffer, waiting, replay of confirmed frames). It runs over a `Transport` (`transports/`: `LoopbackTransport` for tests, `FakeNetwork` for latency/jitter/loss). `sync.ts` handles time sync, `desync.ts` compares checksums every 60 frames, and `protocol.ts` is the binary packet format. Only inputs and hashes go over the wire.
-- Not built yet (SPEC M6): the `ws` signaling server under `server/`, `WebRTCTransport`, room codes and join-by-link.
+- Online play (M6): `server/signaling.ts` (Node + `ws`) only pairs two clients by room code and relays the WebRTC handshake. Server code must stay erasable TypeScript (no enums or parameter properties) and import with `.ts` extensions, since Node strips types at runtime. Message types shared with the client live in `src/net/signalMessages.ts`. `net/peer.ts` opens two negotiated data channels: `game` (unordered, no retransmits) and `control` (reliable). `net/online.ts`'s `OnlineLink` is the room across screens. Screens take control messages with `link.listen(handler)` (`null` queues them for the next screen). Game packets are prefixed with a 1-byte match number via `link.game(match)`. Peers compare `simFingerprint()` first. The host chooses the seed and sends `start`. Online, the local player always uses player 1's controls (solo layout), whichever slot they occupy.
 
 ## Tests worth knowing
 
 - `tests/masher.ts` is a seeded random input source. `determinism.test.ts` uses it for 12,000-frame matches: replay hashes, side-by-side runs, save/restore from clones and serialized bytes, `step()` not mutating its input, and int32-only state.
-- `net.test.ts` runs two sessions on a virtual clock and checks that they confirm exactly what an offline run of the same inputs produces.
+- `net.test.ts` runs two sessions on a virtual clock and checks that they confirm exactly what an offline run of the same inputs produces. `online.test.ts` does the same through two `OnlineLink`s over in-memory channels. `signaling.test.ts` runs the real server on port 0.
 - `roster.test.ts` validates every fighter's move data, that stats really differ, that heavier fighters fly less far, and that every fighter can recover. `moveset.test.ts` pins the input → move table (which buttons and directions give which move). `cpu.test.ts` covers CPU recovery, level ordering (Hard > Normal > Easy) and determinism.
 
 ## Checking the game in a real browser
 
-No browser MCP tools are needed. Launch headless Edge (`C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe --headless=new --remote-debugging-port=...`) and drive it from a Node script over CDP: `Input.dispatchKeyEvent` with `code`, `Page.captureScreenshot`. Pass `--disable-renderer-backgrounding --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-gpu-vsync` and call `Page.bringToFront`, otherwise rAF is throttled and the game loop barely advances. Use a fresh `--user-data-dir` per run.
+No browser MCP tools are needed. Launch headless Edge (`C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe --headless=new --remote-debugging-port=...`) and drive it from a Node script over CDP: `Input.dispatchKeyEvent` with `code`, `Page.captureScreenshot`. Pass `--disable-renderer-backgrounding --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-gpu-vsync` and call `Page.bringToFront`, otherwise rAF is throttled and the game loop barely advances. Use a fresh `--user-data-dir` per run. To test online play, run `npm run server` and start one Edge process per player, each with its own debugging port: a background tab in a shared browser gets throttled. Two local browsers connect over WebRTC without extra flags.

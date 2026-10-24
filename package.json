@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "server": "node server/index.ts",
     "build": "tsc --noEmit && vite build --outDir dist/app --emptyOutDir",
     "build:html": "node scripts/build-html.mjs",
     "preview": "vite preview --outDir dist/app",
@@ -13,8 +14,12 @@
   },
   "devDependencies": {
     "@types/node": "^26.6.5",
+    "@types/ws": "^8.18.2",
     "typescript": "^7.0.2",
     "vite": "^8.3.5",
     "vitest": "^5.0.5"
+  },
+  "dependencies": {
+    "ws": "^8.22.0"
   }
 }

@@ -14,6 +14,10 @@ const BUTTON_FOR: [keyof PlayerKeys, number][] = [
   ['dash', Btn.Dash],
 ];
 
+function isTextField(target: EventTarget | null): boolean {
+  return typeof HTMLInputElement !== 'undefined' && target instanceof HTMLInputElement && !target.readOnly;
+}
+
 /**
  * Tracks key state and produces one input bitmask per sim frame. A key tapped
  * and released between two samples still counts as held for one frame. When
@@ -36,6 +40,7 @@ export class Keyboard {
     this.bound.add(BINDINGS.toggleDebug);
 
     target.addEventListener('keydown', (e) => {
+      if (isTextField(e.target)) return; // typing a room code, not playing
       if (this.bound.has(e.code)) e.preventDefault();
       if (e.repeat) return;
       this.down.set(e.code, ++this.presses);

@@ -1,12 +1,14 @@
 # Smash prototype
 
-Browser platform fighter with (eventually) rollback netcode. See [SPEC.md](SPEC.md).
+Browser platform fighter with rollback netcode, playable online. See [SPEC.md](SPEC.md).
 
-**Play it:** https://vaprin32.github.io/smash/ (GitHub Pages; share that link).
+**Play it:** https://vaprin32.github.io/smash/ (GitHub Pages; share that link). Online play also
+needs a signaling server; see [Online play](#online-play).
 
 ```bash
 npm install
 npm run dev        # http://localhost:5173
+npm run server     # signaling server for online play, ws://localhost:8787
 npm test           # Vitest
 npm run typecheck  # tsc --noEmit
 npm run build:html # dist/index.html, a single file that runs from disk
@@ -14,9 +16,9 @@ npm run build      # regular Vite build into dist/app (needs a web server)
 ```
 
 Main menu → **Local Versus** (two players), **Versus CPU** (you against 1 to 3 computer players),
-**Training** (you against an idle CPU dummy) or **Netcode test** (two players, each on their own
-simulated machine; see below) → character select → 3-stock match → results (Rematch / Watch replay /
-Character select / Main menu).
+**Create / Join Online Room** (1v1 against another browser), **Training** (you against an idle
+CPU dummy) or **Netcode test** (two players, each on their own simulated machine; see below) →
+character select → 3-stock match → results (Rematch / Watch replay / Character select / Main menu).
 
 ## Publishing (GitHub Pages)
 
@@ -24,6 +26,11 @@ Character select / Main menu).
 `dist/index.html` and publishes it as the site's front page. The repository's Pages source is set
 to "GitHub Actions" (Settings → Pages). A run takes a minute or two; the Actions tab shows its
 progress, and a failed test stops the deploy, so the live game only ever changes to a tested build.
+
+Online play on the published site needs a signaling server reachable over `wss://` (see
+[Deploying](#deploying)). Set its address as the repository variable `SIGNAL_URL` (Settings →
+Secrets and variables → Actions → Variables, e.g. `wss://signal.example.com`) and the next deploy
+builds it in. Until then the site's online menus explain that no server could be reached.
 
 ## Versus CPU
 
@@ -79,6 +86,8 @@ plus that fighter's hand-written specials. Looks (proportions, colors, costume) 
 Menus, Versus CPU and Training use the one-player ("solo") layout. Local Versus splits the keyboard in half
 (no numpad needed), and P2's half is P1's mirrored around the middle of each row: movement on
 the outside, actions toward the middle. Keys are physical positions (Ñ is `;` on a US keyboard).
+Holding left and right together (or up and down) counts as whichever was pressed last, so rolling
+from one key to the other never stops you in between.
 
 | Action | Solo (P1) | Versus P1 | Versus P2 | Gamepad |
 |---|---|---|---|---|
@@ -175,3 +184,75 @@ an offline run of the same inputs produces: over a perfect link; at 100 ms / 10 
 for 7,200 frames (rollbacks within 8 frames, no waiting); with heavy jitter and duplicated packets;
 while the input delay changes; at the exact frame a late input rewinds to; through a stall and time
 sync; on disconnect; and that desyncs are detected.
+
+## Online play
+
+Two browsers play 1v1 over a direct WebRTC connection, using the same rollback session as the
+netcode test. A small signaling server (`server/`) only introduces them: it hands out room codes
+and passes the WebRTC offer, answer and ICE candidates between the two. Once they are connected
+it is out of the picture and never sees the game.
+
+**Create Online Room** shows a 5-letter code and a join link. The friend either opens the link
+(`…/?room=ABCDE`) or picks **Join Online Room** and types the code. Both then pick fighters on a
+shared character select (each moves their own cursor; the match starts once both are locked in),
+play with the one-player ("solo") keys or a pad, and on the results screen choose **Rematch**
+(starts when both ask), **Character select** (takes both there) or **Leave room**. During a
+match, Esc twice leaves. If nothing arrives from the other player for 3 seconds the match ends
+with "connection lost"; if the other player leaves, you are told so.
+
+Each side's HUD marks its own fighter "YOU", and F1 shows the same netcode stats as the netcode
+test (ping, rollbacks, frame advantage, checksums). A finished or abandoned online match can be
+watched again from the main menu.
+
+### Running it locally
+
+```bash
+npm run server   # terminal 1: ws://localhost:8787
+npm run dev      # terminal 2 (or open dist/index.html from disk)
+```
+
+Open the game in two browser windows (or two browsers), create a room in one and join from the
+other. To play on two machines on the same network, run `npm run dev -- --host` and open
+`http://<your-ip>:5173/?signal=ws://<your-ip>:8787` on both. The game finds the signaling server
+in this order: a `?signal=` URL parameter (remembered in that browser, and carried in join links),
+then `VITE_SIGNAL_URL` at build time, then port 8787 on the page's own host (localhost when opened
+from disk).
+
+### Deploying
+
+- **Game:** any static host. `npm run build:html` gives one self-contained `dist/index.html`
+  (GitHub Pages already publishes it; see above). Build with `VITE_SIGNAL_URL=wss://your-server`
+  to point it at your signaling server.
+- **Signaling server:** any small Node 24 host (it runs the TypeScript directly). `npm ci`, then
+  `PORT=8787 npm run server`. Pages served over https may only open `wss://` connections, so put it
+  behind TLS, e.g. a reverse proxy (Caddy, nginx) or a platform that terminates TLS for you.
+- **TURN (optional):** players behind strict NATs or firewalls can't always connect directly; the
+  game then says "Couldn't connect to the other player". A TURN server relays their traffic. Give
+  the signaling server its address and credentials and it passes them to both browsers:
+
+  | Variable | Meaning |
+  |---|---|
+  | `PORT` | port to listen on (default 8787) |
+  | `STUN_URLS` | comma-separated STUN URLs (default `stun:stun.l.google.com:19302`) |
+  | `TURN_URLS` | comma-separated TURN URLs, e.g. `turn:turn.example.com:3478` |
+  | `TURN_USERNAME`, `TURN_CREDENTIAL` | TURN credentials |
+
+### How it fits together
+
+| File | Job |
+|---|---|
+| `server/signaling.ts` | rooms and codes, relaying the handshake, ICE config from the environment |
+| `src/net/signalMessages.ts` | the JSON messages between browsers and the server |
+| `src/net/peer.ts` | the WebRTC handshake: an unreliable `game` channel (`ordered: false, maxRetransmits: 0`) for input packets and a reliable `control` channel |
+| `src/net/online.ts` | the room once connected: lobby / rematch messages, heartbeat and round trip, and game packets tagged with a match number so a late packet from the last match never reaches a rematch |
+| `src/net/fingerprint.ts` | a hash of a short scripted brawl per fighter: both sides compare it first, so two different builds refuse to play instead of desyncing |
+| `src/ui/onlineLobby.ts`, `onlineMatch.ts`, `onlineEnd.ts` | create / join, the match, and "connection lost" |
+
+The host picks the seed and sends it with the fighters; its countdown starts half a round trip
+later so both reach frame 0 at about the same time, and time sync evens out the rest.
+
+`tests/signaling.test.ts` runs the real server on a random port with WebSocket clients (rooms,
+pairing, relaying, full and unknown rooms, leaving, garbage, limits, timeouts). `tests/online.test.ts`
+checks the room link in memory: the version check, heartbeat and timeout, leaving, message
+queueing between screens, match tagging, and a whole match played through it confirming the same
+frames on both sides as an offline run.

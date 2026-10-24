@@ -2,6 +2,7 @@ import { Sfx } from './audio/sfx';
 import { Controls } from './input/controls';
 import { Keyboard } from './input/keyboard';
 import { loadKeyboardLayout } from './input/keyLabels';
+import { takeRoomFromUrl } from './net/config';
 import { App } from './ui/app';
 import type { View } from './ui/draw';
 
@@ -13,6 +14,8 @@ const ctx = canvas.getContext('2d')!;
 const keyboard = new Keyboard(window);
 const sfx = new Sfx();
 const app = new App(new Controls(keyboard), sfx);
+const joinCode = takeRoomFromUrl(); // a join link: /?room=ABCDE
+if (joinCode) app.toOnlineLobby('join', joinCode);
 window.addEventListener('keydown', () => sfx.unlock());
 void loadKeyboardLayout(); // key labels for the user's keyboard; until then US labels
 window.addEventListener('pointerdown', () => sfx.unlock());

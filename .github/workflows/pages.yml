@@ -30,6 +30,9 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build:html
+        env:
+          # The signaling server for online play (repository variable; empty until one is deployed).
+          VITE_SIGNAL_URL: ${{ vars.SIGNAL_URL }}
       - name: Collect the site
         run: |
           mkdir -p _site
