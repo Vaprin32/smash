@@ -8,8 +8,9 @@ import { SHIELD_MAX } from '../sim/rules';
 import { animate } from './animations';
 import type { Camera } from './camera';
 import { LOOKS, type FighterLook } from './looks';
-import { drawRig, hueShift, solveRig } from './skeleton';
-import { drawBackground, drawGroundShadow, drawStageArt, drawStageLights } from './scenery';
+import { gfx } from './quality';
+import { drawRig, hueShift, rgbOf, solveRig, type Rig } from './skeleton';
+import { drawAmbience, drawBackground, drawGroundShadow, drawStageArt, drawStageLights } from './scenery';
 import { SERIF, THEME } from './theme';
 
 /** Per player slot (red, blue, gold, green): name tags, cursors, shields. Fighters wear their own colors. */
@@ -48,6 +49,7 @@ export function drawWorld(ctx: CanvasRenderingContext2D, state: MatchState, cam:
   state.fighters.forEach((f, i) => drawFighter(ctx, state, f, i, fighterColor(chars, i), labels[i] || `P${i + 1}`));
   state.fighters.forEach((f, i) => drawProjectile(ctx, f, fighterColor(chars, i)));
   drawStageLights(ctx, t);
+  drawAmbience(ctx, stage.theme, t);
 }
 
 function drawFighter(ctx: CanvasRenderingContext2D, state: MatchState, f: FighterState, slot: number, color: string, label: string): void {
@@ -62,7 +64,6 @@ function drawFighter(ctx: CanvasRenderingContext2D, state: MatchState, f: Fighte
   // Hitlag / shieldstun shake (derived from state, never written back).
   if (f.hitlag > 0 && (f.action === Action.Hitstun || f.action === Action.ShieldStun)) x += state.frame & 1 ? 3 : -3;
 
-  drawSwipes(ctx, f, color);
 
   const { pose, planted, charging } = animate(f, state);
   // Charging a smash: tremble.
@@ -82,6 +83,7 @@ function drawFighter(ctx: CanvasRenderingContext2D, state: MatchState, f: Fighte
     time: performance.now(),
     vx: f.vx / ONE,
   });
+  drawAttackFx(ctx, f, slot, rig, x, y, color);
   if (charging > 0) {
     // Pulsing glow that grows with charge.
     const pulse = 0.25 + 0.25 * Math.sin(performance.now() * 0.025);
@@ -91,7 +93,7 @@ function drawFighter(ctx: CanvasRenderingContext2D, state: MatchState, f: Fighte
     ctx.fill();
   }
   if (f.action === Action.Hitstun && f.actionFrame < 6) {
-    ctx.fillStyle = 'rgba(255,60,60,0.3)';
+    ctx.fillStyle = 'rgba(255,60,60,0.16)';
     ctx.beginPath();
     ctx.arc(x, y - st.height / ONE / 2, st.height / ONE / 2, 0, Math.PI * 2);
     ctx.fill();
@@ -234,9 +236,80 @@ function drawProjectile(ctx: CanvasRenderingContext2D, f: FighterState, color: s
   ctx.restore();
 }
 
-/** Translucent swipe over each active hitbox, so attacks read without the debug view. */
-function drawSwipes(ctx: CanvasRenderingContext2D, f: FighterState, color: string): void {
-  for (const b of activeHitboxes(f)) {
+/** Recent positions of each fighter's striking limb (render memory only), for motion smears. */
+const trails = new Map<number, { x: number; y: number; t: number }[]>();
+const TRAIL_MS = 130;
+
+/**
+ * Attacks, drawn so they read without the debug view: a motion smear behind
+ * whichever hand, foot or head is nearest the active hitbox, and a soft glow
+ * over the hitbox itself. Low quality draws plain outlines instead.
+ */
+function drawAttackFx(ctx: CanvasRenderingContext2D, f: FighterState, slot: number, rig: Rig, x: number, y: number, color: string): void {
+  const boxes = activeHitboxes(f);
+  if (!gfx.trails) return drawSwipes(ctx, f, color, boxes);
+  const now = performance.now();
+  let pts = trails.get(slot);
+  if (!pts) trails.set(slot, (pts = []));
+  if (boxes.length > 0) {
+    // The limb tip nearest the first hitbox (pose space faces right; y up from the feet).
+    const hb = boxes[0]!;
+    const hx = hb.x / ONE, hy = hb.y / ONE;
+    let tip = rig.handF;
+    let best = Infinity;
+    for (const p of [rig.handF, rig.handB, rig.footF, rig.footB, rig.head]) {
+      const d = (p.x - hx) ** 2 + (p.y - hy) ** 2;
+      if (d < best) [best, tip] = [d, p];
+    }
+    pts.push({ x: x + f.facing * tip.x, y: y + tip.y, t: now });
+  }
+  while (pts.length > 0 && now - pts[0]!.t > TRAIL_MS) pts.shift();
+
+  ctx.save();
+  ctx.globalCompositeOperation = gfx.lights ? 'lighter' : 'source-over';
+  // Smear: a ribbon through the recent tip positions, widest and brightest at the newest end.
+  for (let i = 1; i < pts.length; i++) {
+    const a = pts[i - 1]!, b = pts[i]!;
+    const k = 1 - (now - b.t) / TRAIL_MS;
+    if (k <= 0) continue;
+    ctx.strokeStyle = color;
+    ctx.globalAlpha = k * 0.55;
+    ctx.lineCap = 'round';
+    ctx.lineWidth = 14 * k;
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.stroke();
+    ctx.strokeStyle = '#ffffff';
+    ctx.globalAlpha = k * 0.8;
+    ctx.lineWidth = 5 * k;
+    ctx.stroke();
+  }
+  // Soft glow over each active hitbox (moves that hit away from the body still show where).
+  ctx.globalAlpha = 1;
+  for (const b of boxes) {
+    const cx = (f.x + f.facing * b.x) / ONE, cy = (f.y + b.y) / ONE, r = b.r / ONE;
+    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r * 1.1);
+    g.addColorStop(0, 'rgba(255,255,240,0.35)');
+    g.addColorStop(0.6, hexAlpha(color, 0.18));
+    g.addColorStop(1, hexAlpha(color, 0));
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r * 1.1, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+/** Any color as rgba with alpha `a`, for gradients. */
+function hexAlpha(color: string, a: number): string {
+  const [r, g, b] = rgbOf(color);
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+/** Low quality: a translucent circle over each active hitbox. */
+function drawSwipes(ctx: CanvasRenderingContext2D, f: FighterState, color: string, boxes: ReturnType<typeof activeHitboxes>): void {
+  for (const b of boxes) {
     ctx.fillStyle = 'rgba(255,255,255,0.22)';
     ctx.strokeStyle = color;
     ctx.globalAlpha = 0.8;

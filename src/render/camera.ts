@@ -6,8 +6,10 @@ import { ONE } from '../sim/fixed';
 import { STAGES } from '../sim/stage';
 import type { MatchState } from '../sim/state';
 
-const PADDING = 160; // world px around the framed area
-const MIN_VIEW_HEIGHT = 520; // most zoomed in
+const PADDING = 120; // world px around the framed area
+const MIN_VIEW_HEIGHT = 380; // most zoomed in
+/** Always keep this much of the middle of the stage in view (world px either side of x = 0), for context. */
+const STAGE_ANCHOR = 110;
 const MAX_VIEW_HEIGHT = 1500; // most zoomed out
 const SMOOTHING = 0.12;
 
@@ -19,6 +21,8 @@ export class Camera {
   /** Screen-space shake offset in CSS pixels, set by the effects layer. */
   shakeX = 0;
   shakeY = 0;
+  /** Extra zoom for a moment after a strong hit (0 = none), set by the effects layer. */
+  punch = 0;
   private initialized = false;
 
   update(state: MatchState, viewW: number, viewH: number): void {
@@ -32,16 +36,10 @@ export class Camera {
       minY = Math.min(minY, y);
       maxY = Math.max(maxY, y);
     };
-    for (const b of stage.blocks) {
-      include(b.left / ONE, b.top / ONE);
-      include(b.right / ONE, b.bottom / ONE);
-    }
-    for (const p of stage.platforms) {
-      // A moving platform's whole path, so the camera doesn't follow it around.
-      const dx = p.sway?.dx ?? 0, dy = p.sway?.dy ?? 0;
-      include((p.left - dx) / ONE, (p.top - dy) / ONE);
-      include((p.right + dx) / ONE, (p.top + dy) / ONE);
-    }
+    // Frame the fighters (close up when they're close), plus the middle of the stage.
+    const top = Math.min(...stage.blocks.map((b) => b.top)) / ONE;
+    include(-STAGE_ANCHOR, top);
+    include(STAGE_ANCHOR, top + 40);
     for (const f of state.fighters) {
       if (f.action === Action.KO || f.action === Action.Out) continue;
       include(f.x / ONE, f.y / ONE);
@@ -70,7 +68,7 @@ export class Camera {
 
   /** Set the context transform so drawing uses world pixel coordinates. */
   apply(ctx: CanvasRenderingContext2D, viewW: number, viewH: number): void {
-    const z = this.zoom;
+    const z = this.zoom * (1 + this.punch);
     ctx.setTransform(z, 0, 0, z, viewW / 2 - this.x * z + this.shakeX, viewH / 2 - this.y * z + this.shakeY);
   }
 }

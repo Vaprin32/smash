@@ -93,6 +93,21 @@ fighter's smash attacks (`tests/roster.test.ts` checks both).
 
 The look is medieval: a moonlit night over a castle, mountains, a forest and a village, a stone rampart with torches and ivy, oak and gold menus, heraldic HUD shields. The scenery is in `src/render/scenery.ts` (static layers are painted once from a fixed seed, then drawn with parallax), figures and costumes in `src/render/skeleton.ts`, palette and menu pieces in `src/render/theme.ts`; each fighter's title (the Iron Knight, the Cleric, ...) is in `src/render/looks.ts`.
 
+**Effects** (`src/render/effects.ts`, all derived from sim state and keyed by frame so rollbacks
+never repeat them): layered hit sparks (a white-hot core, streaks in the attacker's color,
+shockwave rings, sparks and debris), a camera zoom-punch and screen flash on strong hits,
+Smash-style KO streaks, smoke trails behind launched fighters, dust on landings, jumps, dashes and
+turnarounds, air rings on double jumps, and a glint on ledge grabs. Attacks leave motion smears
+behind the striking limb, with a soft glow over the hitbox. The damage % pops when it goes up. The
+camera frames the fighters closely (plus the middle of the stage) instead of the whole stage.
+Fireflies drift around at night, and birds cross the dusk sky.
+
+**Graphics options** (main menu → Graphics, saved in the browser): quality Auto / High / Medium
+/ Low, screen shake on/off, and an FPS counter. Low lowers the canvas resolution and drops mist,
+clouds, lights, trails and most particles, for slower computers. Auto starts at High and steps down
+by itself if frames keep coming in slower than 60 fps. Graphics never touch the simulation, so
+players on different settings play together fine online.
+
 Each fighter's stats live in `src/sim/fighters/<name>.ts`. Moves are in `src/sim/moves/<name>.ts`:
 a tuning line (frames / size / reach / damage / knockback) that scales Wisp's jabs, tilts,
 aerials and throws, plus that fighter's hand-written smash attacks and specials. Looks (proportions, colors, costume) are in

@@ -10,6 +10,7 @@ import type { Replay } from '../sim/replay';
 import type { MatchSetup } from '../sim/state';
 import { CharSelectScreen } from './charSelect';
 import { ControlsScreen } from './controlsScreen';
+import { GraphicsScreen } from './graphicsScreen';
 import { CpuSetupScreen } from './cpuSetup';
 import type { View } from './draw';
 import { MainMenu } from './mainMenu';
@@ -120,6 +121,10 @@ export class App {
     this.online = null;
     link.onLost = () => {};
     link.leave();
+  }
+
+  toGraphics(): void {
+    this.go(new GraphicsScreen(this), 'solo');
   }
 
   toControls(): void {

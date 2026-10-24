@@ -13,6 +13,23 @@ function damageColor(damage: number): string {
   return `rgb(${Math.round(245 - t * 40)},${g},${b})`;
 }
 
+/** Render memory per player slot: last damage seen, and when (and how much) it last went up. */
+const seenDamage: { damage: number; at: number; size: number }[] = [];
+const POP_MS = 320;
+
+/** 0..1: how much the damage number should be popping right now. */
+function damagePop(slot: number, damage: number): number {
+  const now = performance.now();
+  const s = (seenDamage[slot] ??= { damage, at: 0, size: 0 });
+  if (damage > s.damage) {
+    s.at = now;
+    s.size = Math.min(1, 0.35 + (damage - s.damage) / 20);
+  }
+  s.damage = damage;
+  const t = (now - s.at) / POP_MS;
+  return t >= 1 ? 0 : s.size * (1 - t) * (1 - t);
+}
+
 const PANEL_W = 196;
 const PANEL_H = 84;
 
@@ -67,12 +84,18 @@ export function drawHud(
     ctx.font = `13px ${SERIF}`;
     ctx.fillText(FIGHTERS[f.charId]!.name, x + 76 + tagW + 7, y + 21);
 
+    // The number pops and shakes for a moment when it goes up (more for bigger hits).
+    const pop = damagePop(i, f.damage);
+    ctx.save();
+    ctx.translate(x + 76 + (Math.random() - 0.5) * pop * 8, y + 55 + (Math.random() - 0.5) * pop * 6);
+    ctx.scale(1 + pop * 0.35, 1 + pop * 0.35);
     ctx.font = `bold 32px ${SERIF}`;
     ctx.lineWidth = 4;
     ctx.strokeStyle = THEME.outline;
-    ctx.strokeText(`${f.damage}%`, x + 76, y + 55);
-    ctx.fillStyle = damageColor(f.damage);
-    ctx.fillText(`${f.damage}%`, x + 76, y + 55);
+    ctx.strokeText(`${f.damage}%`, 0, 0);
+    ctx.fillStyle = pop > 0.5 ? '#ffffff' : damageColor(f.damage);
+    ctx.fillText(`${f.damage}%`, 0, 0);
+    ctx.restore();
 
     for (let s = 0; s < f.stocks; s++) heraldicShield(ctx, x + 77 + s * 17, y + 62, 11, fighterColor(chars, i));
     ctx.globalAlpha = 1;

@@ -4,6 +4,7 @@ import { Keyboard } from './input/keyboard';
 import { loadKeyboardLayout } from './input/keyLabels';
 import { loadRemap } from './input/remap';
 import { takeRoomFromUrl } from './net/config';
+import { gfx, noteFrame, settings } from './render/quality';
 import { App } from './ui/app';
 import type { View } from './ui/draw';
 
@@ -23,8 +24,9 @@ void loadKeyboardLayout(); // key labels for the user's keyboard; until then US 
 window.addEventListener('pointerdown', () => sfx.unlock());
 
 const view: View = { w: 0, h: 0, dpr: 1 };
+/** Canvas resolution follows the graphics quality (lower = fewer pixels to paint). */
 function resize(): void {
-  view.dpr = window.devicePixelRatio || 1;
+  view.dpr = Math.min(window.devicePixelRatio || 1, gfx.maxDpr) * gfx.resolution;
   view.w = Math.floor(window.innerWidth * view.dpr);
   view.h = Math.floor(window.innerHeight * view.dpr);
   canvas.width = view.w;
@@ -35,9 +37,11 @@ resize();
 
 let acc = 0;
 let last = performance.now();
+const fps = { frames: 0, since: performance.now(), shown: 0 };
 
 function frame(now: number): void {
-  let dt = Math.min(now - last, 250);
+  const raw = now - last; // real time since the last frame, for auto quality
+  let dt = Math.min(raw, 250);
   last = now;
   // On a ~60 Hz display, snap tiny rAF jitter to exactly one frame so we don't
   // alternate between 0 and 2 fixed ticks per displayed frame.
@@ -54,6 +58,24 @@ function frame(now: number): void {
   if (steps === MAX_STEPS_PER_TICK) acc = 0; // fell far behind (tab was hidden, etc.)
 
   app.draw(ctx, view, dt);
+  if (noteFrame(raw)) resize(); // auto quality stepped down
+  if (settings.showFps) drawFps(now);
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
+
+function drawFps(now: number): void {
+  fps.frames++;
+  if (now - fps.since >= 500) {
+    fps.shown = Math.round((fps.frames * 1000) / (now - fps.since));
+    fps.frames = 0;
+    fps.since = now;
+  }
+  ctx.setTransform(view.dpr, 0, 0, view.dpr, 0, 0);
+  ctx.font = 'bold 13px ui-monospace, Consolas, monospace';
+  ctx.textAlign = 'right';
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  ctx.fillRect(view.w / view.dpr - 70, 4, 66, 20);
+  ctx.fillStyle = fps.shown >= 55 ? '#9be59b' : fps.shown >= 40 ? '#ffd166' : '#ff6b5b';
+  ctx.fillText(`${fps.shown} fps`, view.w / view.dpr - 10, 19);
+}

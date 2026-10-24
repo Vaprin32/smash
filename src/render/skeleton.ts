@@ -126,7 +126,7 @@ export function solveRig(pose: Pose, look: Look, planted: boolean): Rig {
 // shade of their own color rather than a black outline.
 
 /** [r, g, b] of a "#rrggbb" or "rgb(r,g,b)" color. */
-function rgbOf(color: string): [number, number, number] {
+export function rgbOf(color: string): [number, number, number] {
   if (color.startsWith('#')) {
     const n = parseInt(color.slice(1, 7), 16);
     return [(n >> 16) & 255, (n >> 8) & 255, n & 255];

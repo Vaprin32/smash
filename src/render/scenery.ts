@@ -8,6 +8,7 @@
 
 import { ONE } from '../sim/fixed';
 import { platformAt, type StageDef } from '../sim/stage';
+import { gfx } from './quality';
 
 /** What the background needs from a camera (world point at the screen center, and zoom). */
 export interface View3 {
@@ -625,15 +626,15 @@ export function drawBackground(
   theme: Theme = 'night',
 ): void {
   drawSky(ctx, cam, w, h, time, moon, theme);
-  drawClouds(ctx, cam, w, h, time);
+  if (gfx.atmosphere) drawClouds(ctx, cam, w, h, time);
   const [far, near] = mountainTiles();
   drawTiled(ctx, cam, w, h, 0.06, far!, -900);
-  drawMist(ctx, cam, w, h, 0.07, 120, 0.22, time);
+  if (gfx.atmosphere) drawMist(ctx, cam, w, h, 0.07, 120, 0.22, time);
   drawTiled(ctx, cam, w, h, 0.1, near!, -300);
   drawCastle(ctx, cam, w, h, time);
-  drawMist(ctx, cam, w, h, 0.2, 30, 0.2, time * 1.3);
+  if (gfx.atmosphere) drawMist(ctx, cam, w, h, 0.2, 30, 0.2, time * 1.3);
   drawTiled(ctx, cam, w, h, 0.3, hillTile());
-  drawMist(ctx, cam, w, h, 0.4, 60, 0.16, time * 1.7);
+  if (gfx.atmosphere) drawMist(ctx, cam, w, h, 0.4, 60, 0.16, time * 1.7);
   drawTiled(ctx, cam, w, h, 0.62, nearWoodTile(), 200);
 }
 
@@ -1151,6 +1152,7 @@ let stageLights: { x: number; y: number }[] = [];
  * fighters so it falls on them too).
  */
 export function drawStageLights(ctx: Ctx, time: number): void {
+  if (!gfx.lights) return;
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
   for (const s of stageLights) {
@@ -1163,6 +1165,48 @@ export function drawStageLights(ctx: Ctx, time: number): void {
     const a = Math.min(1, e.life / 600);
     ctx.fillStyle = `rgba(255,${150 + Math.round(a * 80)},70,${(a * 0.9).toFixed(3)})`;
     ctx.fillRect(e.x - 0.8, e.y - 0.8, 1.6, 1.6);
+  }
+  ctx.restore();
+}
+
+/** Each firefly / bird: a fixed home and its own phase, so they wander without any stored state. */
+const AMBIENT = (() => {
+  const r = rng(91);
+  return Array.from({ length: 28 }, () => ({ x: (r() - 0.5) * 1000, y: -40 - r() * 260, ph: r() * TAU, sp: 0.4 + r() * 0.6 }));
+})();
+
+/** Ambient life in world space: fireflies at night, birds crossing a dusk sky. */
+export function drawAmbience(ctx: Ctx, theme: Theme, time: number): void {
+  if (!gfx.lights) return;
+  const t = time * 0.001;
+  ctx.save();
+  if (theme === 'night') {
+    ctx.globalCompositeOperation = 'lighter';
+    for (const f of AMBIENT) {
+      const x = f.x + Math.sin(t * 0.3 * f.sp + f.ph) * 60 + Math.sin(t * 0.9 + f.ph * 2) * 12;
+      const y = f.y + Math.cos(t * 0.25 * f.sp + f.ph) * 40;
+      const glow = Math.max(0, Math.sin(t * 2 * f.sp + f.ph * 3));
+      if (glow < 0.05) continue;
+      light(ctx, x, y, 9, 0.35 * glow);
+      ctx.fillStyle = `rgba(230,255,150,${(0.9 * glow).toFixed(3)})`;
+      ctx.fillRect(x - 1, y - 1, 2, 2);
+    }
+  } else {
+    // A loose flock drifting across, wings flapping.
+    ctx.strokeStyle = 'rgba(40,20,40,0.75)';
+    ctx.lineWidth = 1.6;
+    ctx.lineCap = 'round';
+    for (const b of AMBIENT.slice(0, 9)) {
+      const span = 2600;
+      const x = ((((t * 28 * b.sp + b.ph * 400) % span) + span) % span) - span / 2;
+      const y = -520 + b.y * 0.6 + Math.sin(t + b.ph) * 14;
+      const flap = Math.sin(t * 9 * b.sp + b.ph) * 4;
+      ctx.beginPath();
+      ctx.moveTo(x - 8, y - flap);
+      ctx.quadraticCurveTo(x - 4, y - 3, x, y);
+      ctx.quadraticCurveTo(x + 4, y - 3, x + 8, y - flap);
+      ctx.stroke();
+    }
   }
   ctx.restore();
 }
@@ -1198,7 +1242,7 @@ export function drawGroundShadow(ctx: Ctx, stage: StageDef, x: number, y: number
 
 /** Low mist drifting in front of everything, and a vignette. Screen space. */
 export function drawForeground(ctx: Ctx, cam: View3, w: number, h: number, time: number): void {
-  drawMist(ctx, cam, w, h, 1.1, 230, 0.12, time * 2);
+  if (gfx.atmosphere) drawMist(ctx, cam, w, h, 1.1, 230, 0.12, time * 2);
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   const v = ctx.createRadialGradient(w / 2, h * 0.45, Math.min(w, h) * 0.35, w / 2, h * 0.5, Math.max(w, h) * 0.75);
   v.addColorStop(0, 'rgba(8,6,16,0)');

@@ -26,6 +26,7 @@ export class MainMenu implements Screen {
       'Training',
       'Netcode test',
       ...(app.lastMatch ? ['Watch replay'] : []),
+      'Graphics',
       'Controls',
     ];
     this.list = new MenuList(this.items.length);
@@ -57,6 +58,9 @@ export class MainMenu implements Screen {
         break;
       case 'Watch replay':
         this.app.watchReplay(() => this.app.toMainMenu('Watch replay'));
+        break;
+      case 'Graphics':
+        this.app.toGraphics();
         break;
       default:
         this.app.toControls();

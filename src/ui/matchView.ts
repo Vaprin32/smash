@@ -53,10 +53,12 @@ export class MatchView {
     this.effects.update(dtMs);
     this.camera.shakeX = this.effects.shakeX * dpr;
     this.camera.shakeY = this.effects.shakeY * dpr;
+    this.camera.punch = this.effects.punch;
     this.camera.update(state, w, h);
     drawWorld(ctx, state, this.camera, w, h, hud.labels);
     this.effects.draw(ctx);
     drawForeground(ctx, this.camera, w, h, performance.now());
+    this.effects.drawScreen(ctx, w, h);
     const debug = this.app.debug;
     if (debug) drawDebugWorld(ctx, state, this.camera, w, h);
     drawHud(ctx, state, w, h, dpr, hud.labels, hud.hint);
