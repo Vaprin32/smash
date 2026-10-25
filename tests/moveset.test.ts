@@ -5,7 +5,7 @@ import { FIGHTERS } from '../src/sim/fighters';
 import { px } from '../src/sim/fixed';
 import { Btn } from '../src/sim/input';
 import { MoveId } from '../src/sim/moves/types';
-import { GRAB_HOLD_BASE, MAX_SMASH_CHARGE } from '../src/sim/rules';
+import { GRAB_HOLD_BASE, MAX_SMASH_CHARGE, SMASH_HOLD_FRAMES } from '../src/sim/rules';
 import { createMatch, type FighterState, type MatchState } from '../src/sim/state';
 import { step } from '../src/sim/step';
 
@@ -149,6 +149,19 @@ describe('smash attacks', () => {
     charged = run(charged, 30, 0);
     expect(charged.fighters[1]!.damage).toBeGreaterThan(tapDmg);
   });
+
+  it('a fully charged smash can be held about 2.5 s more, with no extra power', () => {
+    const full = run(run(duel(60), MAX_SMASH_CHARGE + 20, Btn.Heavy), 30, 0).fighters[1]!.damage;
+    // Still holding well past full charge.
+    let held = run(duel(60), MAX_SMASH_CHARGE + SMASH_HOLD_FRAMES - 10, Btn.Heavy);
+    expect(held.fighters[0]!.action).toBe(Action.Attack);
+    expect(held.fighters[1]!.damage).toBe(0);
+    held = run(held, 30, 0);
+    expect(held.fighters[1]!.damage).toBe(full);
+    // Holding past the limit lets it go by itself.
+    const auto = run(duel(60), MAX_SMASH_CHARGE + SMASH_HOLD_FRAMES + 30, Btn.Heavy);
+    expect(auto.fighters[1]!.damage).toBe(full);
+  });
 });
 
 describe('ground normals', () => {
@@ -208,15 +221,45 @@ describe('specials', () => {
     expect(s.fighters[1]!.shieldHp).toBeLessThan(5000 - 80 * 15);
   });
 
-  it('down special counters a hit and strikes back', () => {
-    let event = 0;
-    // Dummy counters on frame 0 (window frames 6-24); P1 jabs on frame 6, hits on 8.
-    const s = run(duel(40), 30, (i) => (i === 6 ? Btn.Attack : 0), tap(Btn.Special | Btn.Down), (n) => {
-      event = Math.max(event, n.fighters[1]!.event);
+  it('down special is a multi-hit drill dive that ends in a finishing hit on landing', () => {
+    let hits = 0;
+    let finished = false;
+    run(duel(40), 60, tap(Btn.Special | Btn.Down), 0, (n) => {
+      if (n.fighters[1]!.event === SimEvent.Hit) hits++;
+      if (n.fighters[0]!.action === Action.Attack && n.fighters[0]!.move === MoveId.DrillLand) finished = true;
     });
-    expect(event).toBe(SimEvent.Counter);
-    expect(s.fighters[1]!.damage).toBe(0);
-    expect(s.fighters[0]!.damage).toBe(12);
+    expect(hits).toBeGreaterThanOrEqual(3);
+    expect(finished).toBe(true);
+  });
+
+  it('a whiffed drill dive can be jump-cancelled, but only after a while', () => {
+    const drill = wisp.moves[MoveId.DownSpecial]!;
+    const high = () => {
+      const s = duel(400);
+      s.fighters[0]!.y = px(-400);
+      s.fighters[0]!.ground = -1;
+      return run(s, 1, Btn.Special | Btn.Down);
+    };
+    // Too early: the jump press is ignored (it stays buffered for a few frames only).
+    let s = run(high(), 2, (i) => (i === 0 ? Btn.Jump : 0));
+    expect(s.fighters[0]!.action).toBe(Action.Attack);
+    // Later: jump gets out, with an air jump.
+    s = run(high(), drill.jumpCancel!, 0);
+    const jumps = s.fighters[0]!.jumpsLeft;
+    s = run(s, 1, Btn.Jump);
+    expect(s.fighters[0]!.action).toBe(Action.Air);
+    expect(s.fighters[0]!.jumpsLeft).toBe(jumps - 1);
+    expect(s.fighters[0]!.vy).toBeLessThan(0);
+  });
+
+  it('a drill dive that hit something cannot be jump-cancelled', () => {
+    const drill = wisp.moves[MoveId.DownSpecial]!;
+    // P1 hops and dives onto the dummy; once it connects, jump does nothing.
+    let s = run(duel(40), drill.jumpCancel! - 1, tap(Btn.Special | Btn.Down));
+    expect(s.fighters[0]!.move).toBe(MoveId.DownSpecial); // still diving
+    expect(s.fighters[1]!.damage).toBeGreaterThan(0);
+    s = run(s, 1, Btn.Jump);
+    expect(s.fighters[0]!.action).toBe(Action.Attack);
   });
 
   it('side special works once per airtime', () => {

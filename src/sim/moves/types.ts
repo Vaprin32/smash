@@ -34,6 +34,8 @@ export const MoveId = {
   DThrow: 25,
   /** Climbing up from a ledge with the attack button. */
   LedgeAttack: 26,
+  /** Drill dive (down special) touching down: the finishing hit. */
+  DrillLand: 27,
 } as const;
 
 export type MoveIdValue = (typeof MoveId)[keyof typeof MoveId];
@@ -67,6 +69,8 @@ export interface ImpulseDef {
   vy?: number;
   /** Applied only when airborne. */
   airVy?: number;
+  /** Applied only when grounded (a hop that starts the move). */
+  groundVy?: number;
 }
 
 export interface GrabboxDef {
@@ -120,6 +124,12 @@ export interface MoveDef {
   projectile?: ProjectileDef;
   /** Counter window (inclusive move frames): getting hit then triggers CounterStrike instead. */
   counter?: readonly [number, number];
+  /** Multi-hit: every this many move frames, fighters already hit can be hit again. */
+  rehit?: number;
+  /** From this move frame on, jump cancels the move if it hasn't hit anything yet. */
+  jumpCancel?: number;
+  /** Touching down during the move starts this move instead of landing lag. */
+  landingMove?: MoveIdValue;
 }
 
 /** Helper so move files can be written in pixels. */

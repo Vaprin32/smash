@@ -58,6 +58,8 @@ export const SHIELD_BREAK_RESET = 3000;
 export const MAX_SMASH_CHARGE = 60;
 /** Charged damage/base knockback = value * (CHARGE_DEN + charge) / CHARGE_DEN. */
 export const CHARGE_DEN = 150;
+/** Once fully charged, a smash can be held this much longer (2.5 s) before it goes off by itself. */
+export const SMASH_HOLD_FRAMES = 150;
 
 // Grabs.
 /** The held fighter is kept this percent of both fighters' half-widths in front of the grabber. */

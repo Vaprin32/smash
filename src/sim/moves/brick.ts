@@ -67,18 +67,5 @@ export const BRICK_MOVES = deriveMoves(
       impulses: [{ frame: 6, vx: px(1.5), vy: px(-13.5) }],
       hitboxes: [hitbox({ frames: [6, 14], x: 14, y: -70, r: 24, damage: 10, kb: 6, growth: 9, angle: 80 })],
     },
-    [MoveId.DownSpecial]: {
-      // Hops, hangs, then drops straight down; a stomp on the ground.
-      name: 'Ground Pound',
-      total: 50,
-      landingLag: 18,
-      noDrift: true,
-      noGravity: [1, 26],
-      impulses: [
-        { frame: 1, airVy: px(-2) },
-        { frame: 12, airVy: px(12) },
-      ],
-      hitboxes: [hitbox({ frames: [12, 26], x: 0, y: -10, r: 30, damage: 14, kb: 6, growth: 11, angle: 80 })],
-    },
   },
 );

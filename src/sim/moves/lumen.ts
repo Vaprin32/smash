@@ -63,15 +63,5 @@ export const LUMEN_MOVES = deriveMoves(
       impulses: [{ frame: 6, vx: px(2), vy: px(-12) }],
       hitboxes: [hitbox({ frames: [6, 12], x: 0, y: -40, r: 22, damage: 4, kb: 4, growth: 4, angle: 85 })],
     },
-    [MoveId.DownSpecial]: {
-      // Hovers and bursts outward: an escape when crowded.
-      name: 'Flare',
-      total: 40,
-      landingLag: 10,
-      noDrift: true,
-      noGravity: [1, 20],
-      impulses: [{ frame: 1, airVy: 0 }],
-      hitboxes: [hitbox({ frames: [12, 15], x: 0, y: -36, r: 46, damage: 10, kb: 6.5, growth: 10, angle: 60 })],
-    },
   },
 );

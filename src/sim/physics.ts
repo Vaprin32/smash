@@ -2,6 +2,7 @@
 // box whose origin is the bottom-center (feet). Standing / landing uses the feet point.
 
 import { Action, isGroundFree, setAction } from './actions';
+import { startMove } from './attacks';
 import type { FighterDef } from './fighters/types';
 import { Btn } from './input';
 import { KNOCKDOWN_HITSTUN } from './rules';
@@ -121,9 +122,12 @@ function land(f: FighterState, ground: number, top: number, def: FighterDef): vo
     case Action.SpotDodge:
     case Action.ShieldBreak:
       return;
-    case Action.Attack:
-      startLanding(f, def.moves[f.move]!.landingLag ?? st.landingLag);
+    case Action.Attack: {
+      const m = def.moves[f.move]!;
+      if (m.landingMove !== undefined) startMove(f, m.landingMove);
+      else startLanding(f, m.landingLag ?? st.landingLag);
       return;
+    }
     case Action.SpecialFall:
       startLanding(f, st.specialFallLanding);
       return;

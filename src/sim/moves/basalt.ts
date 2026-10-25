@@ -67,19 +67,5 @@ export const BASALT_MOVES = deriveMoves(
       impulses: [{ frame: 8, vx: px(1.5), vy: px(-13.5) }],
       hitboxes: [hitbox({ frames: [8, 18], x: 10, y: -80, r: 30, damage: 12, kb: 6, growth: 9, angle: 82 })],
     },
-    [MoveId.DownSpecial]: {
-      // Slams the ground on both sides.
-      // A hop, then the whole golem comes down; spikes in the air, pops up on the ground.
-      name: 'Seismic Slam',
-      total: 60,
-      landingLag: 22,
-      noDrift: true,
-      noGravity: [1, 16],
-      impulses: [
-        { frame: 4, vy: px(-6) },
-        { frame: 16, vy: px(13) },
-      ],
-      hitboxes: [hitbox({ frames: [16, 30], x: 0, y: -14, r: 40, damage: 20, kb: 7, growth: 14, angle: 75 })],
-    },
   },
 );

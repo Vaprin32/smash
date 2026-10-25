@@ -13,13 +13,15 @@ import type { FighterDef } from './fighters/types';
 import { Btn } from './input';
 import { MoveId, type MoveIdValue } from './moves/types';
 import { airMotion, inputDirX } from './movement';
-import { GRAB_MASH_FRAMES, MAX_SMASH_CHARGE } from './rules';
+import { GRAB_MASH_FRAMES, MAX_SMASH_CHARGE, SMASH_HOLD_FRAMES } from './rules';
 import type { FighterState } from './state';
 
 /** 1/sqrt(2) in 8-bit fixed point, for diagonal air dodges. */
 const DIAGONAL = 181;
 /** Frames after a grab connects before a held direction throws. */
 const THROW_INPUT_DELAY = 3;
+/** A hitMask bit no fighter index uses: "this move has hit something" survives multi-hit resets. */
+export const HIT_ANY = 1 << 8;
 
 /**
  * Consume a buffered button press if the fighter can act. Directions are read
@@ -137,12 +139,13 @@ export function updateAttack(f: FighterState, input: number, pressed: number, de
   const st = def.stats;
   const m = def.moves[f.move]!;
 
-  // Smash charge: holding the heavy button freezes the move on its charge frame.
+  // Smash charge: holding the heavy button freezes the move on its charge frame. Power stops
+  // growing at MAX_SMASH_CHARGE; the fighter can keep holding it for SMASH_HOLD_FRAMES more.
   if (
     m.chargeFrame !== undefined &&
     f.actionFrame === m.chargeFrame &&
     input & Btn.Heavy &&
-    f.charge < MAX_SMASH_CHARGE
+    f.charge < MAX_SMASH_CHARGE + SMASH_HOLD_FRAMES
   ) {
     f.charge++;
     f.vx = approach(f.vx, 0, st.groundFriction);
@@ -160,6 +163,24 @@ export function updateAttack(f: FighterState, input: number, pressed: number, de
     } else {
       setAction(f, m.helplessAfter ? Action.SpecialFall : Action.Air);
       airMotion(f, input, pressed, st, true, true);
+    }
+    return;
+  }
+
+  // Multi-hit: let the same fighters be hit again, remembering that something was hit.
+  if (m.rehit && f.hitMask !== 0 && f.actionFrame % m.rehit === 0) f.hitMask = HIT_ANY;
+
+  // Whiffed (nothing hit yet): a jump gets out of the move, using an air jump if one is left.
+  if (m.jumpCancel && f.actionFrame >= m.jumpCancel && f.hitMask === 0 && f.ground < 0 && f.jumpBuffer > 0) {
+    f.jumpBuffer = 0;
+    setAction(f, Action.Air);
+    f.fastFall = 0;
+    f.hopOpen = 0;
+    if (f.jumpsLeft > 0) {
+      f.jumpsLeft--;
+      f.vy = -st.doubleJumpSpeed;
+      const dirX = inputDirX(input);
+      if (dirX !== 0) f.vx = dirX * st.airMaxSpeed;
     }
     return;
   }
@@ -198,6 +219,11 @@ export function updateAttack(f: FighterState, input: number, pressed: number, de
       if (imp.airVy !== undefined && f.ground < 0) {
         f.vy = imp.airVy;
         f.fastFall = 0;
+      }
+      if (imp.groundVy !== undefined && f.ground >= 0) {
+        f.vy = imp.groundVy;
+        f.fastFall = 0;
+        if (imp.groundVy < 0) f.ground = -1;
       }
     }
   }

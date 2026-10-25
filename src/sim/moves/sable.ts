@@ -73,18 +73,5 @@ export const SABLE_MOVES = deriveMoves(
       impulses: [{ frame: 5, vx: px(2), vy: px(-13.5) }],
       hitboxes: [hitbox({ frames: [5, 14], x: 26, y: -70, r: 24, damage: 9, kb: 5.5, growth: 9, angle: 80 })],
     },
-    [MoveId.DownSpecial]: {
-      // Slashes in front, then behind.
-      name: 'Whirl Slash',
-      total: 40,
-      landingLag: 12,
-      noDrift: true,
-      noGravity: [6, 18],
-      impulses: [{ frame: 1, airVy: px(-2) }],
-      hitboxes: [
-        hitbox({ frames: [8, 11], x: 50, y: -36, r: 24, damage: 9, kb: 5, growth: 10, angle: 40 }),
-        hitbox({ frames: [14, 17], x: -50, y: -36, r: 24, damage: 10, kb: 5.5, growth: 11, angle: 140 }),
-      ],
-    },
   },
 );

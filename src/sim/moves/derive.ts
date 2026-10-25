@@ -66,5 +66,6 @@ function scaleMove(m: MoveDef, t: MoveTuning): MoveDef {
     out.projectile = { ...p, frame: fr(p.frame), x: pct(p.x, t.size), y: pct(p.y, t.size), hit: strength(p.hit) };
   }
   if (m.counter) out.counter = span(m.counter[0], m.counter[1]);
+  if (m.jumpCancel !== undefined) out.jumpCancel = fr(m.jumpCancel);
   return out;
 }

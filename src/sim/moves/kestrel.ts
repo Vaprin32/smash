@@ -68,18 +68,5 @@ export const KESTREL_MOVES = deriveMoves(
       impulses: [{ frame: 6, vx: px(2), vy: px(-15.5) }],
       hitboxes: [hitbox({ frames: [6, 13], x: 6, y: -40, r: 22, damage: 8, kb: 5, growth: 8, angle: 80 })],
     },
-    [MoveId.DownSpecial]: {
-      // Stalls, then drops like a stone; spikes anyone underneath.
-      name: 'Plummet',
-      total: 30,
-      landingLag: 14,
-      noDrift: true,
-      noGravity: [1, 18],
-      impulses: [
-        { frame: 1, airVy: 0 },
-        { frame: 6, airVy: px(13) },
-      ],
-      hitboxes: [hitbox({ frames: [6, 18], x: 2, y: 4, r: 20, damage: 10, kb: 4, growth: 10, angle: 270 })],
-    },
   },
 );

@@ -7,7 +7,7 @@ import { Action } from '../sim/actions';
 import { FIGHTERS } from '../sim/fighters';
 import { ONE } from '../sim/fixed';
 import { MoveId, type MoveDef } from '../sim/moves/types';
-import { LEDGE_CLIMB_FRAMES, SHIELD_DROP_FRAMES } from '../sim/rules';
+import { LEDGE_CLIMB_FRAMES, MAX_SMASH_CHARGE, SHIELD_DROP_FRAMES } from '../sim/rules';
 import type { FighterState, MatchState } from '../sim/state';
 import { mixPose, type Pose } from './skeleton';
 
@@ -41,6 +41,7 @@ const LIMP = P({ torso: 12, head: 18, armF: [25, 10], armB: [15, 10], legF: [10,
 const GUARD = P({ torso: 12, head: -4, armF: [75, 110], armB: [62, 118], legF: [28, -40], legB: [-28, -25] });
 const HOLD = P({ torso: 14, armF: [86, 10], armB: [76, 16], legF: [25, -20], legB: [-25, -10] });
 const HELD = P({ torso: -12, head: -10, armF: [40, 30], armB: [20, 40], legF: [10, -30], legB: [-10, -20] });
+const DRILL = P({ torso: -38, head: 14, armF: [205, 15], armB: [190, 20], legF: [42, 0], legB: [32, -8] });
 const COUNTER_STANCE = P({ torso: -6, head: -4, armF: [110, -50], armB: [40, 100], legF: [30, -20], legB: [-30, -10] });
 
 interface AttackAnim {
@@ -123,7 +124,10 @@ const ATTACKS: Record<number, AttackAnim> = {
     P({ torso: 22, armF: [10, 125], armB: [-20, 60], legF: [58, -115], legB: [32, -100] }),
     P({ torso: -6, head: -12, armF: [176, 0], armB: [148, 22], legF: [10, -10], legB: [-15, -45] }),
   ),
-  [MoveId.DownSpecial]: A(GUARD, COUNTER_STANCE),
+  // Drill dive: tucked, then feet-first down and forward, leaning back, arms trailing up.
+  [MoveId.DownSpecial]: A(TUCK, DRILL),
+  // Touching down out of the drill: legs snap apart in a burst.
+  [MoveId.DrillLand]: A(DRILL, P({ torso: -10, head: -10, armF: [150, 10], armB: [-150, 10], legF: [55, -20], legB: [-50, -20] })),
   [MoveId.CounterStrike]: A(
     COUNTER_STANCE,
     P({ torso: 30, head: -6, armF: [72, 0], armB: [40, 10], legF: [58, -45], legB: [-46, 0] }),
@@ -176,49 +180,40 @@ const BIG_KICK = P({ torso: -26, head: -8, armF: [-50, 30], armB: [50, 40], legF
 const CHAR_ATTACKS: Record<string, Record<number, AttackAnim>> = {
   Brick: {
     [MoveId.SideSpecial]: A(DASH, SHOULDER_CHARGE),
-    [MoveId.DownSpecial]: ATTACKS[MoveId.DAir]!,
     [MoveId.DSmash]: A(KNEE_UP, STOMP),
   },
   Pip: {
     [MoveId.FSmash]: ATTACKS[MoveId.NSpecial]!,
     [MoveId.DSmash]: A(CROUCH, SPREAD_LOW),
-    [MoveId.DownSpecial]: A(CROUCH, ATTACKS[MoveId.USmash]!.strike[0]!),
   },
   Kestrel: {
     [MoveId.SideSpecial]: A(
       TUCK,
       P({ torso: 34, head: -8, armF: [-50, 20], armB: [-70, 20], legF: [62, 0], legB: [-15, -70] }),
     ),
-    [MoveId.DownSpecial]: ATTACKS[MoveId.DAir]!,
     [MoveId.FSmash]: ATTACKS[MoveId.SideSpecial]!,
     [MoveId.USmash]: A(CROUCH, ARC_FRONT, ARC_TOP, ARC_BACK),
     [MoveId.DSmash]: A(CROUCH, SPLITS),
   },
   Lumen: {
     [MoveId.SideSpecial]: ATTACKS[MoveId.NSpecial]!,
-    [MoveId.DownSpecial]: A(GUARD, P({ torso: -8, head: -12, armF: [125, 0], armB: [-125, 0], legF: [30, -10], legB: [-30, -10] })),
     [MoveId.DSmash]: A(GUARD, SPREAD_LOW),
   },
   Basalt: {
     [MoveId.NSpecial]: A(OVERHEAD, SLAM),
     [MoveId.SideSpecial]: A(DASH, SHOULDER_CHARGE),
-    [MoveId.DownSpecial]: ATTACKS[MoveId.DAir]!,
     [MoveId.USmash]: A(CROUCH, ARC_TOP),
     [MoveId.DSmash]: A(OVERHEAD, { ...SPREAD_LOW, torso: 38, armF: [40, 0], armB: [-40, 0] }),
   },
   Rook: {
     [MoveId.FSmash]: A(KNEE_UP, BIG_KICK),
+    [MoveId.DownSpecial]: A(GUARD, COUNTER_STANCE), // Riposte, a counter
   },
   Sable: {
     [MoveId.FSmash]: A(CLEAVE_UP, ARC_TOP, CLEAVE_DOWN),
     [MoveId.USmash]: A(CROUCH, ARC_FRONT, ARC_TOP, ARC_BACK),
     [MoveId.DSmash]: A(CROUCH, { ...SPREAD_LOW, torso: 34, armF: [80, 0], armB: [-80, 0] }),
     [MoveId.SideSpecial]: ATTACKS[MoveId.FSmash]!,
-    [MoveId.DownSpecial]: A(
-      P({ torso: -6, armF: [-40, 30], armB: [20, 40], legF: [30, -30], legB: [-30, -10] }),
-      P({ torso: 22, armF: [96, 0], armB: [-30, 30], legF: [40, -30], legB: [-35, -5] }),
-      P({ torso: -14, head: -10, armF: [-100, 0], armB: [40, 30], legF: [35, -10], legB: [-40, -30] }),
-    ),
   },
 };
 
@@ -270,7 +265,13 @@ function attackPose(f: FighterState, base: Pose): Pose {
     if (t > k1) continue;
     const [k0, p0] = keys[i - 1]!;
     const u = k1 === k0 ? 1 : (t - k0) / (k1 - k0);
-    return mixPose(p0, p1, ease(clamp01(u)));
+    const pose = mixPose(p0, p1, ease(clamp01(u)));
+    // Multi-hit (the drill): legs flutter every frame while it's hitting.
+    if (m.rehit && t >= first && t <= windows[windows.length - 1]![1]) {
+      const k = t & 1 ? 9 : -9;
+      return { ...pose, legF: [pose.legF[0] + k, pose.legF[1]], legB: [pose.legB[0] - k, pose.legB[1]], spin: pose.spin + k * 0.4 };
+    }
+    return pose;
   }
   return base;
 }
@@ -348,7 +349,7 @@ export function animate(f: FighterState, state: MatchState): Animated {
       return out(airPose(f), false);
     case Action.Attack: {
       const m = FIGHTERS[f.charId]!.moves[f.move];
-      const charging = m?.chargeFrame !== undefined && t === m.chargeFrame && f.charge > 0 ? f.charge / 60 : 0;
+      const charging = m?.chargeFrame !== undefined && t === m.chargeFrame && f.charge > 0 ? Math.min(f.charge, MAX_SMASH_CHARGE) / MAX_SMASH_CHARGE : 0;
       return { pose: attackPose(f, grounded ? STAND : AIR_FALL), planted: grounded, charging };
     }
     case Action.Hitstun: {

@@ -48,9 +48,10 @@ describe('roster', () => {
     expect(new Set(FIGHTERS.map((f) => f.name)).size).toBe(8);
   });
 
-  it('every fighter has its own signature specials', () => {
-    const names = FIGHTERS.flatMap((f) => SPECIALS.map((id) => f.moves[id]!.name));
+  it('every fighter has its own signature specials (down special is the shared drill dive, except Rook)', () => {
+    const names = FIGHTERS.flatMap((f) => SPECIALS.filter((id) => id !== MoveId.DownSpecial).map((id) => f.moves[id]!.name));
     expect(new Set(names).size).toBe(names.length);
+    for (const f of FIGHTERS) expect(f.moves[MoveId.DownSpecial]!.name).toBe(f.name === 'Rook' ? 'Riposte' : 'Drill Dive');
   });
 
   it('stats really differ: every pair differs in at least three key stats', () => {
@@ -262,10 +263,12 @@ describe('specials', () => {
     });
   });
 
-  it('once-per-airtime specials work once until landing (Pip Spring)', () => {
+  it('once-per-airtime specials work once until landing (Pip drill dive, high up)', () => {
     const pip = byName('Pip');
     const s0 = duel(pip, pip, 400);
     s0.fighters[0]!.x = 0;
+    s0.fighters[0]!.y = px(-400);
+    s0.fighters[0]!.ground = -1;
     let s = run(s0, 8, Btn.Jump);
     s = run(s, 1, Btn.Special | Btn.Down);
     expect(s.fighters[0]!.move).toBe(MoveId.DownSpecial);

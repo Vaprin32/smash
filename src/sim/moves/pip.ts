@@ -68,14 +68,5 @@ export const PIP_MOVES = deriveMoves(
       impulses: [{ frame: 4, vx: px(1.5), vy: px(-11.5) }],
       hitboxes: [hitbox({ frames: [4, 12], x: 0, y: -26, r: 20, damage: 5, kb: 4.5, growth: 5, angle: 85 })],
     },
-    [MoveId.DownSpecial]: {
-      // A springy hop with a hitbox; not helpless, so it's an extra jump.
-      name: 'Spring',
-      total: 30,
-      landingLag: 8,
-      oncePerAir: true,
-      impulses: [{ frame: 6, vy: px(-9) }],
-      hitboxes: [hitbox({ frames: [6, 10], x: 0, y: -8, r: 18, damage: 4, kb: 4, growth: 5, angle: 80 })],
-    },
   },
 );

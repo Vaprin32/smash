@@ -11,6 +11,7 @@ import type { FighterStats } from './fighters/types';
 import { MoveId, type HitboxDef } from './moves/types';
 import {
   CHARGE_DEN,
+  MAX_SMASH_CHARGE,
   COUNTER_FREEZE,
   GRAB_HOLD_BASE,
   GRAB_HOLD_DAMAGE_DIVISOR,
@@ -79,7 +80,7 @@ function circleTouches(cx: number, cy: number, r: number, v: FighterState, vst: 
 /** A smash attack's charge scales damage and base knockback (up to 1.4x). */
 function charged(a: FighterState, h: HitboxDef): HitboxDef {
   if (a.charge === 0) return h;
-  const k = CHARGE_DEN + a.charge;
+  const k = CHARGE_DEN + Math.min(a.charge, MAX_SMASH_CHARGE); // held past full charge: no extra power
   return { ...h, damage: idiv(h.damage * k, CHARGE_DEN), baseKb: idiv(h.baseKb * k, CHARGE_DEN) };
 }
 

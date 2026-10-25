@@ -141,14 +141,23 @@ const moves: Record<number, MoveDef> = {
     hitboxes: [hitbox({ frames: [5, 12], x: 0, y: -40, r: 26, damage: 6, kb: 5, growth: 6, angle: 88 })],
   },
   [MoveId.DownSpecial]: {
-    name: 'Mirror Guard',
+    // Drill dive: a short stall (a hop from the ground), then a fast feet-first dive down and
+    // forward that hits over and over. Touching down ends it with a finishing hit (DrillLand).
+    // Whiffed, a jump gets out of it from frame 22.
+    name: 'Drill Dive',
     total: 40,
-    landingLag: 10,
+    landingLag: 12,
     noDrift: true,
-    counter: [6, 24],
-    noGravity: [1, 24],
-    impulses: [{ frame: 1, airVy: 0 }],
-    hitboxes: [],
+    oncePerAir: true,
+    noGravity: [1, 34],
+    rehit: 4,
+    jumpCancel: 22,
+    landingMove: MoveId.DrillLand,
+    impulses: [
+      { frame: 1, vx: 0, airVy: 0, groundVy: px(-6.5) },
+      { frame: 7, vx: px(5), airVy: px(6) },
+    ],
+    hitboxes: [hitbox({ frames: [7, 34], x: 12, y: -4, r: 17, damage: 1, kb: 3.5, growth: 0, angle: 300 })],
   },
   [MoveId.CounterStrike]: {
     name: 'Mirror Strike',
@@ -174,6 +183,12 @@ const moves: Record<number, MoveDef> = {
     name: 'Ledge Attack',
     total: 26,
     hitboxes: [hitbox({ frames: [7, 10], x: 26, y: -16, r: 22, damage: 9, kb: 5.5, growth: 6, angle: 25 })],
+  },
+  [MoveId.DrillLand]: {
+    // The drill dive touching down: a burst that pops everyone up and away.
+    name: 'Drill Finish',
+    total: 20,
+    hitboxes: [hitbox({ frames: [1, 3], x: 6, y: -14, r: 24, damage: 5, kb: 6, growth: 9, angle: 55 })],
   },
 };
 
