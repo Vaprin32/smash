@@ -67,5 +67,6 @@ function scaleMove(m: MoveDef, t: MoveTuning): MoveDef {
   }
   if (m.counter) out.counter = span(m.counter[0], m.counter[1]);
   if (m.jumpCancel !== undefined) out.jumpCancel = fr(m.jumpCancel);
+  if (m.turnUntil !== undefined) out.turnUntil = fr(m.turnUntil);
   return out;
 }

@@ -130,6 +130,8 @@ export interface MoveDef {
   jumpCancel?: number;
   /** Jump cancels the move (from `jumpCancel` on) even after it has hit something. */
   jumpCancelOnHit?: boolean;
+  /** Up to this move frame (inclusive), holding left or right turns the fighter that way. */
+  turnUntil?: number;
   /** Touching down during the move starts this move instead of landing lag. */
   landingMove?: MoveIdValue;
 }

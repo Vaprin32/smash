@@ -143,7 +143,8 @@ const moves: Record<number, MoveDef> = {
   [MoveId.DownSpecial]: {
     // Drill dive: a short stall (a hop from the ground), then a fast feet-first dive down and
     // forward that hits over and over. Touching down ends it with a finishing hit (DrillLand).
-    // Whiffed, a jump gets out of it from frame 22.
+    // Whiffed, a jump gets out of it from frame 22. Left or right held until the dive starts
+    // picks its direction, so it can be turned around mid-jump.
     name: 'Drill Dive',
     total: 40,
     landingLag: 12,
@@ -152,6 +153,7 @@ const moves: Record<number, MoveDef> = {
     noGravity: [1, 34],
     rehit: 4,
     jumpCancel: 22,
+    turnUntil: 7,
     landingMove: MoveId.DrillLand,
     impulses: [
       { frame: 1, vx: 0, airVy: 0, groundVy: px(-6.5) },

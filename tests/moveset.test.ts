@@ -252,6 +252,23 @@ describe('specials', () => {
     expect(s.fighters[0]!.vy).toBeLessThan(0);
   });
 
+  it('the drill dive goes the way held, even turned around mid-jump', () => {
+    const drill = wisp.moves[MoveId.DownSpecial]!;
+    // Facing right in the air: down-left + special dives left.
+    let s = run(airborne(), 1, Btn.Special | Btn.Down | Btn.Left);
+    s = run(s, drill.turnUntil! + 2, Btn.Left);
+    expect(s.fighters[0]!.facing).toBe(-1);
+    expect(s.fighters[0]!.vx).toBeLessThan(0);
+    // Plain down + special, then left pressed during the stall: still turns.
+    s = run(airborne(), 1, Btn.Special | Btn.Down);
+    s = run(s, 2, 0);
+    s = run(s, drill.turnUntil!, Btn.Left);
+    expect(s.fighters[0]!.vx).toBeLessThan(0);
+    // Once diving, it no longer turns.
+    s = run(s, 4, Btn.Right);
+    expect(s.fighters[0]!.facing).toBe(-1);
+  });
+
   it('a drill dive that hit something cannot be jump-cancelled', () => {
     const drill = wisp.moves[MoveId.DownSpecial]!;
     // P1 hops and dives onto the dummy; once it connects, jump does nothing.

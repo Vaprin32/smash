@@ -136,7 +136,8 @@ someone standing on it. Special + direction: neutral / side / up (recovery) / do
 
 **Drill Dive** (down special, every fighter but Rook, who keeps the Riposte counter, and the two
 heavyweights): a quick hop from the ground (a short stall in the air), then a feet-first dive down
-and forward that hits over and over, and a finishing burst when it touches down. Once per airtime.
+and forward that hits over and over, and a finishing burst when it touches down. Hold left or right
+(at the start or during the stall) to pick its direction, even turning around mid-jump. Once per airtime.
 If it hasn't hit anything by its 22nd frame, a jump cancels it (using an air jump if one is left).
 
 **Anvil Drop** (Brick) and **Meteor Drop** (Basalt) replace the drill: a hop (a brief hang in the

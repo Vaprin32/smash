@@ -167,6 +167,12 @@ export function updateAttack(f: FighterState, input: number, pressed: number, de
     return;
   }
 
+  // Early on, a held direction picks which way the move goes (e.g. the drill's dive, mid-jump).
+  if (m.turnUntil !== undefined && f.actionFrame <= m.turnUntil) {
+    const dirX = inputDirX(input);
+    if (dirX !== 0) f.facing = dirX;
+  }
+
   // Multi-hit: let the same fighters be hit again, remembering that something was hit.
   if (m.rehit && f.hitMask !== 0 && f.actionFrame % m.rehit === 0) f.hitMask = HIT_ANY;
 
