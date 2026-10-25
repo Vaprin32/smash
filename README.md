@@ -80,11 +80,11 @@ Every solid block's top corners are ledges.
 | Fighter | Archetype | Smash attacks (K: forward / up / down) | Specials (I: neutral, side, up, down) |
 |---|---|---|---|
 | Wisp | fast, light, floaty | Gale Palm / Whirlwind / Sweeping Gust | Wind Bolt, Gust Dash, Updraft, Drill Dive |
-| Brick | heavy, slow, hard-hitting | Gauntlet Hook / Helm Bash / Tremor Stomp | Gauntlet Toss, Bull Rush, Rocket Fist, Drill Dive |
+| Brick | heavy, slow, hard-hitting | Gauntlet Hook / Helm Bash / Tremor Stomp | Gauntlet Toss, Bull Rush, Rocket Fist, Anvil Drop |
 | Pip | tiny featherweight, three air jumps | Sling Snap / Sky Shot / Pebble Scatter | Pebble Toss, Tumble, Pinwheel, Drill Dive |
 | Kestrel | fast-faller rushdown | Talon Thrust / Wing Flare / Spur Sweep | Feather Dart, Dive Kick, Skyward, Drill Dive |
 | Lumen | floaty zoner | Censer Swing / Halo / Twin Pillars | Lumen Orb, Light Lance (tipper), Ascend, Drill Dive |
-| Basalt | giant super-heavyweight, worst recovery | Boulder Fist / Lava Crown / Twin Quake | Eruption, Landslide, Magma Leap, Drill Dive |
+| Basalt | giant super-heavyweight, worst recovery | Boulder Fist / Lava Crown / Twin Quake | Eruption, Landslide, Magma Leap, Meteor Drop |
 | Sable | long reach (sword) | Overhead Cleave / Rising Arc / Ankle Sweep | Crescent Wave, Lunge (tipper), Rising Blade, Drill Dive |
 | Rook | all-rounder | Heavy Kick / Rising Palm / Sweep Kick | Palm Burst, Spin Kick, Rising Uppercut, Riposte (counter) |
 
@@ -134,10 +134,15 @@ smash (hold to charge: full power after 1 s, then it can be held 2.5 s more befo
 itself); up smash also reaches straight up through the platform overhead, so it hits
 someone standing on it. Special + direction: neutral / side / up (recovery) / down special.
 
-**Drill Dive** (down special, every fighter but Rook, who keeps the Riposte counter): a quick
-hop from the ground (a short stall in the air), then a feet-first dive down and forward that hits
-over and over, and a finishing burst when it touches down. Once per airtime. If it hasn't hit
-anything by its 22nd frame, a jump cancels it (using an air jump if one is left).
+**Drill Dive** (down special, every fighter but Rook, who keeps the Riposte counter, and the two
+heavyweights): a quick hop from the ground (a short stall in the air), then a feet-first dive down
+and forward that hits over and over, and a finishing burst when it touches down. Once per airtime.
+If it hasn't hit anything by its 22nd frame, a jump cancels it (using an air jump if one is left).
+
+**Anvil Drop** (Brick) and **Meteor Drop** (Basalt) replace the drill: a hop (a brief hang in the
+air), then a straight drop at about twice fast-fall speed that spikes anyone below, and a quake
+out to both sides on touching down. A jump cancels the fall at any point after the first few
+frames, even after it has hit, so it can be used to spike offstage and still get back.
 Down on a platform drops through it, and holding down while falling passes through platforms
 instead of landing on them.
 

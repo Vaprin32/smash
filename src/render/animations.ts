@@ -155,6 +155,8 @@ const ATTACKS: Record<number, AttackAnim> = {
 const SHOULDER_CHARGE = P({ torso: 40, head: -14, armF: [30, 90], armB: [-40, 60], legF: [60, -40], legB: [-50, -35] });
 const OVERHEAD = P({ torso: -10, head: -8, armF: [170, 10], armB: [160, 10], legF: [30, -30], legB: [-30, -10] });
 const SLAM = P({ torso: 40, head: 10, armF: [40, 0], armB: [30, 0], legF: [50, -60], legB: [-40, -20] });
+/** The heavies' down special: dropping straight down, fists driven below, knees bent under. */
+const PLUNGE = P({ torso: 14, head: 12, armF: [-12, 40], armB: [12, 40], legF: [55, -70], legB: [-45, -60] });
 
 /**
  * Per-fighter overrides (by fighter name, then MoveId) for signature moves
@@ -181,6 +183,8 @@ const CHAR_ATTACKS: Record<string, Record<number, AttackAnim>> = {
   Brick: {
     [MoveId.SideSpecial]: A(DASH, SHOULDER_CHARGE),
     [MoveId.DSmash]: A(KNEE_UP, STOMP),
+    [MoveId.DownSpecial]: A(OVERHEAD, PLUNGE), // Anvil Drop
+    [MoveId.DrillLand]: A(PLUNGE, SPREAD_LOW),
   },
   Pip: {
     [MoveId.FSmash]: ATTACKS[MoveId.NSpecial]!,
@@ -204,6 +208,8 @@ const CHAR_ATTACKS: Record<string, Record<number, AttackAnim>> = {
     [MoveId.SideSpecial]: A(DASH, SHOULDER_CHARGE),
     [MoveId.USmash]: A(CROUCH, ARC_TOP),
     [MoveId.DSmash]: A(OVERHEAD, { ...SPREAD_LOW, torso: 38, armF: [40, 0], armB: [-40, 0] }),
+    [MoveId.DownSpecial]: A(OVERHEAD, PLUNGE), // Meteor Drop
+    [MoveId.DrillLand]: A(PLUNGE, SPREAD_LOW),
   },
   Rook: {
     [MoveId.FSmash]: A(KNEE_UP, BIG_KICK),

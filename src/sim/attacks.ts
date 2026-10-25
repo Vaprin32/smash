@@ -170,8 +170,10 @@ export function updateAttack(f: FighterState, input: number, pressed: number, de
   // Multi-hit: let the same fighters be hit again, remembering that something was hit.
   if (m.rehit && f.hitMask !== 0 && f.actionFrame % m.rehit === 0) f.hitMask = HIT_ANY;
 
-  // Whiffed (nothing hit yet): a jump gets out of the move, using an air jump if one is left.
-  if (m.jumpCancel && f.actionFrame >= m.jumpCancel && f.hitMask === 0 && f.ground < 0 && f.jumpBuffer > 0) {
+  // Whiffed (nothing hit yet, unless jumpCancelOnHit): a jump gets out of the move, using an
+  // air jump if one is left.
+  const whiffed = f.hitMask === 0 || m.jumpCancelOnHit;
+  if (m.jumpCancel && f.actionFrame >= m.jumpCancel && whiffed && f.ground < 0 && f.jumpBuffer > 0) {
     f.jumpBuffer = 0;
     setAction(f, Action.Air);
     f.fastFall = 0;

@@ -67,5 +67,31 @@ export const BASALT_MOVES = deriveMoves(
       impulses: [{ frame: 8, vx: px(1.5), vy: px(-13.5) }],
       hitboxes: [hitbox({ frames: [8, 18], x: 10, y: -80, r: 30, damage: 12, kb: 6, growth: 9, angle: 82 })],
     },
+    [MoveId.DownSpecial]: {
+      // A hop (or a brief hang in the air), then the whole golem drops like a meteor, spiking
+      // whatever is below. A jump gets out of the fall at any time from frame 14, hit or not,
+      // so it can be used offstage. Touching down cracks the ground both ways (DrillLand).
+      name: 'Meteor Drop',
+      total: 100,
+      noDrift: true,
+      oncePerAir: true,
+      noGravity: [11, 100],
+      jumpCancel: 14,
+      jumpCancelOnHit: true,
+      landingMove: MoveId.DrillLand,
+      impulses: [
+        { frame: 1, vx: 0, airVy: px(-2), groundVy: px(-7) },
+        { frame: 11, vx: 0, vy: px(24) },
+      ],
+      hitboxes: [hitbox({ frames: [11, 100], x: 0, y: -30, r: 38, damage: 17, kb: 4.5, growth: 10, angle: 270 })],
+    },
+    [MoveId.DrillLand]: {
+      name: 'Meteor Crater',
+      total: 38,
+      hitboxes: [
+        hitbox({ frames: [1, 4], x: 52, y: -14, r: 40, damage: 15, kb: 7, growth: 12, angle: 40 }),
+        hitbox({ frames: [1, 4], x: -52, y: -14, r: 40, damage: 15, kb: 7, growth: 12, angle: 140 }),
+      ],
+    },
   },
 );

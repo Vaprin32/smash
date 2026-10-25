@@ -48,10 +48,11 @@ describe('roster', () => {
     expect(new Set(FIGHTERS.map((f) => f.name)).size).toBe(8);
   });
 
-  it('every fighter has its own signature specials (down special is the shared drill dive, except Rook)', () => {
+  it('every fighter has its own signature specials (down special is the shared drill dive, except Rook and the heavies)', () => {
     const names = FIGHTERS.flatMap((f) => SPECIALS.filter((id) => id !== MoveId.DownSpecial).map((id) => f.moves[id]!.name));
     expect(new Set(names).size).toBe(names.length);
-    for (const f of FIGHTERS) expect(f.moves[MoveId.DownSpecial]!.name).toBe(f.name === 'Rook' ? 'Riposte' : 'Drill Dive');
+    const own: Record<string, string> = { Rook: 'Riposte', Brick: 'Anvil Drop', Basalt: 'Meteor Drop' };
+    for (const f of FIGHTERS) expect(f.moves[MoveId.DownSpecial]!.name).toBe(own[f.name] ?? 'Drill Dive');
   });
 
   it('stats really differ: every pair differs in at least three key stats', () => {

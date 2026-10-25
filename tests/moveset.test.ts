@@ -262,6 +262,62 @@ describe('specials', () => {
     expect(s.fighters[0]!.action).toBe(Action.Attack);
   });
 
+  describe('heavies plunge instead of drilling (Brick, Basalt)', () => {
+    const heavies = FIGHTERS.flatMap((f, i) => (f.name === 'Brick' || f.name === 'Basalt' ? [i] : []));
+    /** P1 (the heavy) high above the dummy, then down special. */
+    const above = (c: number, dummyDamage = 0) => {
+      const s = createMatch({ seed: 1, stageId: 0, chars: [c, 0], stocks: 3 });
+      const [a, b] = s.fighters as [FighterState, FighterState];
+      a.x = 0;
+      a.y = px(-300);
+      a.ground = -1;
+      b.x = px(400);
+      b.damage = dummyDamage;
+      return run(s, 1, Btn.Special | Btn.Down);
+    };
+
+    it.each(heavies)('fighter %i falls much faster than a fast fall and lands in a shockwave', (c) => {
+      const def = FIGHTERS[c]!;
+      let fastest = 0;
+      let quake = false;
+      run(above(c), 80, 0, 0, (n) => {
+        const f = n.fighters[0]!;
+        fastest = Math.max(fastest, f.vy);
+        if (f.action === Action.Attack && f.move === MoveId.DrillLand) quake = true;
+      });
+      expect(fastest).toBeGreaterThan(def.stats.fastFallSpeed + px(6));
+      expect(quake).toBe(true);
+    });
+
+    it.each(heavies)('fighter %i can jump out of the fall even after spiking someone', (c) => {
+      const def = FIGHTERS[c]!;
+      const dn = def.moves[MoveId.DownSpecial]!;
+      let s = above(c);
+      // Put the dummy right below the falling heavy.
+      s.fighters[1]!.x = 0;
+      s.fighters[0]!.y = px(-700);
+      s.fighters[1]!.y = px(-600);
+      s.fighters[1]!.ground = -1;
+      let spiked = false;
+      for (let i = 0; i < 30 && !spiked; i++) {
+        s = run(s, 1, 0);
+        spiked = s.fighters[1]!.damage > 0;
+      }
+      expect(spiked).toBe(true);
+      while (s.fighters[0]!.hitlag > 0) s = run(s, 1, 0);
+      s = run(s, Math.max(0, dn.jumpCancel! - s.fighters[0]!.actionFrame), 0);
+      expect(s.fighters[0]!.move).toBe(MoveId.DownSpecial); // still plunging
+      s = run(s, 1, Btn.Jump);
+      expect(s.fighters[0]!.action).toBe(Action.Air);
+      expect(s.fighters[0]!.vy).toBeLessThan(0);
+    });
+
+    it('lighter fighters keep the drill dive', () => {
+      expect(wisp.moves[MoveId.DownSpecial]!.name).toBe('Drill Dive');
+      expect(wisp.moves[MoveId.DownSpecial]!.jumpCancelOnHit).toBeUndefined();
+    });
+  });
+
   it('side special works once per airtime', () => {
     let s = airborne();
     s = run(s, 1, Btn.Special | Btn.Right);

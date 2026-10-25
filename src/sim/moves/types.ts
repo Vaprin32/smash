@@ -34,7 +34,7 @@ export const MoveId = {
   DThrow: 25,
   /** Climbing up from a ledge with the attack button. */
   LedgeAttack: 26,
-  /** Drill dive (down special) touching down: the finishing hit. */
+  /** Down special touching down: the drill's finishing hit, or the heavies' plunge shockwave. */
   DrillLand: 27,
 } as const;
 
@@ -128,6 +128,8 @@ export interface MoveDef {
   rehit?: number;
   /** From this move frame on, jump cancels the move if it hasn't hit anything yet. */
   jumpCancel?: number;
+  /** Jump cancels the move (from `jumpCancel` on) even after it has hit something. */
+  jumpCancelOnHit?: boolean;
   /** Touching down during the move starts this move instead of landing lag. */
   landingMove?: MoveIdValue;
 }

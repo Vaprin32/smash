@@ -67,5 +67,31 @@ export const BRICK_MOVES = deriveMoves(
       impulses: [{ frame: 6, vx: px(1.5), vy: px(-13.5) }],
       hitboxes: [hitbox({ frames: [6, 14], x: 14, y: -70, r: 24, damage: 10, kb: 6, growth: 9, angle: 80 })],
     },
+    [MoveId.DownSpecial]: {
+      // A hop (or a brief hang in the air), then he drops like an anvil, spiking whatever is
+      // below. A jump gets out of the fall at any time from frame 12, hit or not, so it can
+      // be used offstage. Touching down sends a quake out both ways (DrillLand).
+      name: 'Anvil Drop',
+      total: 100,
+      noDrift: true,
+      oncePerAir: true,
+      noGravity: [9, 100],
+      jumpCancel: 12,
+      jumpCancelOnHit: true,
+      landingMove: MoveId.DrillLand,
+      impulses: [
+        { frame: 1, vx: 0, airVy: px(-2), groundVy: px(-7) },
+        { frame: 9, vx: 0, vy: px(20) },
+      ],
+      hitboxes: [hitbox({ frames: [9, 100], x: 0, y: -24, r: 30, damage: 14, kb: 4, growth: 9, angle: 270 })],
+    },
+    [MoveId.DrillLand]: {
+      name: 'Anvil Quake',
+      total: 32,
+      hitboxes: [
+        hitbox({ frames: [1, 4], x: 40, y: -12, r: 32, damage: 12, kb: 6.5, growth: 11, angle: 40 }),
+        hitbox({ frames: [1, 4], x: -40, y: -12, r: 32, damage: 12, kb: 6.5, growth: 11, angle: 140 }),
+      ],
+    },
   },
 );
