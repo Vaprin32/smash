@@ -9,7 +9,7 @@ import { animate } from './animations';
 import type { Camera } from './camera';
 import { LOOKS, type FighterLook } from './looks';
 import { gfx } from './quality';
-import { drawRig, hueShift, rgbOf, solveRig, type Rig } from './skeleton';
+import { drawRig, hueShift, rgbOf, solveRig, type Pt, type Rig } from './skeleton';
 import { drawAmbience, drawBackground, drawGroundShadow, drawStageArt, drawStageLights } from './scenery';
 import { SERIF, THEME } from './theme';
 
@@ -73,31 +73,24 @@ function drawFighter(ctx: CanvasRenderingContext2D, state: MatchState, f: Fighte
   if (f.invincible > 0 && (state.frame >> 2) & 1) alpha = 0.45;
   if (intangible && f.invincible === 0) alpha = 0.5;
   const rig = solveRig(pose, look, planted);
+  const now = performance.now();
+  // Outline flashes: red as a hit lands, warm white flickering while a smash charges.
+  let outline: string | undefined;
+  if (intangible) outline = '#ffffff';
+  else if (f.action === Action.Hitstun && f.actionFrame < 6) outline = '#ff4a3a';
+  else if (charging > 0 && Math.sin(now * 0.04) > 0.2 - charging) outline = '#ffe9a0';
   drawRig(ctx, rig, look, {
     x,
     y,
     facing: f.facing,
     color: f.action === Action.SpecialFall ? '#7c8592' : color,
     alpha,
-    outline: intangible ? '#ffffff' : undefined,
-    time: performance.now(),
+    outline,
+    time: now,
     vx: f.vx / ONE,
   });
-  drawAttackFx(ctx, f, slot, rig, x, y, color);
-  if (charging > 0) {
-    // Pulsing glow that grows with charge.
-    const pulse = 0.25 + 0.25 * Math.sin(performance.now() * 0.025);
-    ctx.fillStyle = `rgba(255,240,170,${(pulse * (0.4 + charging)).toFixed(3)})`;
-    ctx.beginPath();
-    ctx.arc(x, y - st.height / ONE / 2, st.height / ONE / 2 + 6 * charging, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  if (f.action === Action.Hitstun && f.actionFrame < 6) {
-    ctx.fillStyle = 'rgba(255,60,60,0.16)';
-    ctx.beginPath();
-    ctx.arc(x, y - st.height / ONE / 2, st.height / ONE / 2, 0, Math.PI * 2);
-    ctx.fill();
-  }
+  drawAttackFx(ctx, f, slot, rig, look, x, y, color);
+  if (charging > 0) drawCharge(ctx, f, rig, look, x, y, charging, now);
 
   drawShield(ctx, f, x, y - st.height / ONE / 2, st.height / ONE, tag);
   if (f.action === Action.ShieldBreak && f.ground >= 0) drawDizzy(ctx, x, y - st.height / ONE - 14, state.frame);
@@ -236,69 +229,206 @@ function drawProjectile(ctx: CanvasRenderingContext2D, f: FighterState, color: s
   ctx.restore();
 }
 
-/** Recent positions of each fighter's striking limb (render memory only), for motion smears. */
-const trails = new Map<number, { x: number; y: number; t: number }[]>();
-const TRAIL_MS = 130;
+/** A point that can strike, and the joint it swings around (pose space). */
+interface Striker {
+  tip: Pt;
+  root: Pt;
+  /** Which limb or weapon (index into strikers()). */
+  id?: number;
+}
+
+/** Hands, feet, head, and the business end of a held weapon. */
+function strikers(rig: Rig, look: FighterLook): Striker[] {
+  const out: Striker[] = [
+    { tip: rig.handF, root: rig.shoulder },
+    { tip: rig.handB, root: rig.shoulder },
+    { tip: rig.footF, root: rig.hip },
+    { tip: rig.footB, root: rig.hip },
+    { tip: rig.head, root: rig.shoulder },
+  ];
+  if (look.costume === 'duelist') {
+    // Rapier along the forearm (skeleton.ts draws it 44 px past the hand).
+    const dx = rig.handF.x - rig.elbowF.x, dy = rig.handF.y - rig.elbowF.y;
+    const d = Math.hypot(dx, dy) || 1;
+    out.push({ tip: { x: rig.handF.x + (dx / d) * 44, y: rig.handF.y + (dy / d) * 44 }, root: rig.handF });
+  } else if (look.costume === 'cleric') {
+    out.push({ tip: { x: rig.handB.x, y: rig.handB.y - 31 }, root: rig.handB }); // staff head
+  }
+  return out;
+}
+
+/** The striker nearest a pose-space point. */
+function nearestStriker(rig: Rig, look: FighterLook, x: number, y: number): Striker {
+  let best = Infinity;
+  let pick: Striker | undefined;
+  for (const [i, s] of strikers(rig, look).entries()) {
+    const d = (s.tip.x - x) ** 2 + (s.tip.y - y) ** 2;
+    if (d < best) [best, pick] = [d, { ...s, id: i }];
+  }
+  return pick!;
+}
 
 /**
- * Attacks, drawn so they read without the debug view: a motion smear behind
- * whichever hand, foot or head is nearest the active hitbox, and a soft glow
- * over the hitbox itself. Low quality draws plain outlines instead.
+ * Recent striker positions per fighter slot, in the fighter's own pose space
+ * (so the swing stays attached to them while they move). Render memory only.
  */
-function drawAttackFx(ctx: CanvasRenderingContext2D, f: FighterState, slot: number, rig: Rig, x: number, y: number, color: string): void {
+interface Swing {
+  move: number;
+  /** The striker being traced; switching limbs starts a fresh trail. */
+  limb: number;
+  pts: { tx: number; ty: number; rx: number; ry: number; t: number }[];
+}
+const swings = new Map<number, Swing>();
+const SWING_MS = 150;
+/** Move frames before a hitbox comes out that the swing is already traced. */
+const SWING_LEAD = 3;
+
+/**
+ * Attacks, drawn so they read without the debug view: a tapered swoosh swept
+ * by the striking hand, foot, head or weapon, and a crescent slash at each
+ * active hitbox, bulging the way it launches. No round glows.
+ */
+function drawAttackFx(ctx: CanvasRenderingContext2D, f: FighterState, slot: number, rig: Rig, look: FighterLook, x: number, y: number, color: string): void {
   const boxes = activeHitboxes(f);
-  if (!gfx.trails) return drawSwipes(ctx, f, color, boxes);
   const now = performance.now();
-  let pts = trails.get(slot);
-  if (!pts) trails.set(slot, (pts = []));
-  if (boxes.length > 0) {
-    // The limb tip nearest the first hitbox (pose space faces right; y up from the feet).
-    const hb = boxes[0]!;
-    const hx = hb.x / ONE, hy = hb.y / ONE;
-    let tip = rig.handF;
-    let best = Infinity;
-    for (const p of [rig.handF, rig.handB, rig.footF, rig.footB, rig.head]) {
-      const d = (p.x - hx) ** 2 + (p.y - hy) ** 2;
-      if (d < best) [best, tip] = [d, p];
-    }
-    pts.push({ x: x + f.facing * tip.x, y: y + tip.y, t: now });
+  const move = f.action === Action.Attack ? f.move : -1;
+  let sw = swings.get(slot);
+  if (!sw || sw.move !== move) swings.set(slot, (sw = { move, limb: -1, pts: [] }));
+  const pts = sw.pts;
+  // Follow the limb from a few frames before the hitbox comes out, so the ribbon shows the whole swing.
+  const aim = boxes[0] ?? (move >= 0 ? FIGHTERS[f.charId]!.moves[move]?.hitboxes.find((h) => f.actionFrame < h.start && f.actionFrame >= h.start - SWING_LEAD) : undefined);
+  if (aim) {
+    const s = nearestStriker(rig, look, aim.x / ONE, aim.y / ONE);
+    if (s.id !== sw.limb) [sw.limb, pts.length] = [s.id!, 0];
+    pts.push({ tx: s.tip.x, ty: s.tip.y, rx: s.root.x, ry: s.root.y, t: now });
   }
-  while (pts.length > 0 && now - pts[0]!.t > TRAIL_MS) pts.shift();
+  while (pts.length > 0 && now - pts[0]!.t > SWING_MS) pts.shift();
+  if (pts.length < 2 && boxes.length === 0) return;
 
   ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(f.facing, 1);
   ctx.globalCompositeOperation = gfx.lights ? 'lighter' : 'source-over';
-  // Smear: a ribbon through the recent tip positions, widest and brightest at the newest end.
-  for (let i = 1; i < pts.length; i++) {
-    const a = pts[i - 1]!, b = pts[i]!;
-    const k = 1 - (now - b.t) / TRAIL_MS;
-    if (k <= 0) continue;
-    ctx.strokeStyle = color;
-    ctx.globalAlpha = k * 0.55;
-    ctx.lineCap = 'round';
-    ctx.lineWidth = 14 * k;
-    ctx.beginPath();
-    ctx.moveTo(a.x, a.y);
-    ctx.lineTo(b.x, b.y);
-    ctx.stroke();
-    ctx.strokeStyle = '#ffffff';
-    ctx.globalAlpha = k * 0.8;
-    ctx.lineWidth = 5 * k;
-    ctx.stroke();
-  }
-  // Soft glow over each active hitbox (moves that hit away from the body still show where).
-  ctx.globalAlpha = 1;
-  for (const b of boxes) {
-    const cx = (f.x + f.facing * b.x) / ONE, cy = (f.y + b.y) / ONE, r = b.r / ONE;
-    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r * 1.1);
-    g.addColorStop(0, 'rgba(255,255,240,0.35)');
-    g.addColorStop(0.6, hexAlpha(color, 0.18));
-    g.addColorStop(1, hexAlpha(color, 0));
-    ctx.fillStyle = g;
-    ctx.beginPath();
-    ctx.arc(cx, cy, r * 1.1, 0, Math.PI * 2);
-    ctx.fill();
-  }
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  if (pts.length >= 2) drawSwoosh(ctx, pts, now, color);
+  boxes.slice(0, 3).forEach((b, i) => {
+    const span = b.end - b.start + 1;
+    const k = 1 - (f.actionFrame - b.start) / span; // 1 on the first active frame
+    drawSlash(ctx, b.x / ONE, b.y / ONE, b.r / ONE, b.angle, k * (i === 0 ? 1 : 0.6), color);
+  });
   ctx.restore();
+}
+
+/**
+ * The swept area between the tip's path and a line partway toward its root:
+ * widest and brightest at the newest end, thinning to a point at the oldest,
+ * with a white-hot leading edge.
+ */
+function drawSwoosh(ctx: CanvasRenderingContext2D, pts: Swing['pts'], now: number, color: string): void {
+  const n = pts.length;
+  const outer: Pt[] = [];
+  const inner: Pt[] = [];
+  for (let i = 0; i < n; i++) {
+    const p = pts[i]!;
+    const age = Math.min(1, (now - p.t) / SWING_MS);
+    const w = 0.5 * (i / (n - 1)) * (1 - age * 0.5); // 0 at the oldest sample
+    outer.push({ x: p.tx, y: p.ty });
+    inner.push({ x: p.tx + (p.rx - p.tx) * w, y: p.ty + (p.ry - p.ty) * w });
+  }
+  // Barely moved (a poke): the ribbon would be a dot; the slash covers it.
+  let len = 0;
+  for (let i = 1; i < n; i++) len += Math.hypot(outer[i]!.x - outer[i - 1]!.x, outer[i]!.y - outer[i - 1]!.y);
+  if (len < 6) return;
+  const head = 1 - Math.min(1, (now - pts[n - 1]!.t) / SWING_MS);
+  const tail = outer[0]!, tip = outer[n - 1]!;
+  if (gfx.trails) {
+    const g = ctx.createLinearGradient(tail.x, tail.y, tip.x, tip.y);
+    g.addColorStop(0, hexAlpha(color, 0));
+    g.addColorStop(0.55, hexAlpha(color, 0.45 * head));
+    g.addColorStop(1, `rgba(255,255,255,${(0.85 * head).toFixed(3)})`);
+    ctx.fillStyle = g;
+  } else {
+    ctx.fillStyle = hexAlpha(color, 0.5 * head);
+  }
+  ctx.beginPath();
+  smoothPath(ctx, outer, false);
+  smoothPath(ctx, inner.reverse(), true);
+  ctx.closePath();
+  ctx.fill();
+  // Leading edge.
+  ctx.strokeStyle = `rgba(255,255,255,${(0.9 * head).toFixed(3)})`;
+  ctx.lineWidth = gfx.trails ? 2.2 : 1.5;
+  ctx.beginPath();
+  smoothPath(ctx, outer.slice(Math.floor(n / 3)), false);
+  ctx.stroke();
+}
+
+/** Quadratic curves through midpoints, so per-frame samples read as one smooth arc. */
+function smoothPath(ctx: CanvasRenderingContext2D, p: Pt[], cont: boolean): void {
+  if (cont) ctx.lineTo(p[0]!.x, p[0]!.y);
+  else ctx.moveTo(p[0]!.x, p[0]!.y);
+  for (let i = 1; i < p.length - 1; i++) {
+    ctx.quadraticCurveTo(p[i]!.x, p[i]!.y, (p[i]!.x + p[i + 1]!.x) / 2, (p[i]!.y + p[i + 1]!.y) / 2);
+  }
+  const last = p[p.length - 1]!;
+  ctx.lineTo(last.x, last.y);
+}
+
+/**
+ * A crescent slash over a hitbox, bulging toward its launch angle (degrees,
+ * 0 = forward, 90 = up; pose space already faces forward), tapered at both
+ * horns. `k` is 1 when the hitbox comes out and fades toward 0.
+ */
+function drawSlash(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number, angleDeg: number, k: number, color: string): void {
+  if (k <= 0) return;
+  const dir = (-angleDeg * Math.PI) / 180; // canvas y is down
+  const ux = Math.cos(dir), uy = Math.sin(dir);
+  const spread = 1.25; // half the arc, radians
+  const ro = r * (0.85 + (1 - k) * 0.3); // sweeps outward a little as it fades
+  const thick = r * 0.55 * (0.4 + 0.6 * k);
+  // Outer edge: an arc around a center pulled back against the launch.
+  const ox = cx - ux * r * 0.35, oy = cy - uy * r * 0.35;
+  // Inner edge: through the same horns from a center further back, so the band is thickest in the middle.
+  const ix = ox - ux * thick, iy = oy - uy * thick;
+  const a0 = dir - spread, a1 = dir + spread;
+  const h0x = ox + Math.cos(a0) * ro, h0y = oy + Math.sin(a0) * ro;
+  const h1x = ox + Math.cos(a1) * ro, h1y = oy + Math.sin(a1) * ro;
+  const ri = Math.hypot(h0x - ix, h0y - iy);
+  const b0 = Math.atan2(h0y - iy, h0x - ix), b1 = Math.atan2(h1y - iy, h1x - ix);
+
+  ctx.beginPath();
+  ctx.arc(ox, oy, ro, a0, a1);
+  ctx.arc(ix, iy, ri, b1, b0, true);
+  ctx.closePath();
+  if (gfx.trails) {
+    const g = ctx.createLinearGradient(ix, iy, ox + ux * ro, oy + uy * ro);
+    g.addColorStop(0, hexAlpha(color, 0));
+    g.addColorStop(0.5, hexAlpha(color, 0.75 * k));
+    g.addColorStop(1, `rgba(255,255,255,${(0.9 * k).toFixed(3)})`);
+    ctx.fillStyle = g;
+  } else {
+    ctx.fillStyle = hexAlpha(color, 0.45 * k);
+  }
+  ctx.fill();
+  // Bright rim along the outer edge.
+  ctx.strokeStyle = `rgba(255,255,255,${(0.85 * k).toFixed(3)})`;
+  ctx.lineWidth = Math.max(1, r * 0.08) * (0.5 + k * 0.5);
+  ctx.beginPath();
+  ctx.arc(ox, oy, ro, a0 + 0.25, a1 - 0.25);
+  ctx.stroke();
+  // A couple of speed lines trailing off behind it.
+  if (gfx.trails && k > 0.3) {
+    ctx.strokeStyle = hexAlpha(color, 0.55 * k);
+    ctx.lineWidth = 1.5;
+    for (const side of [-0.45, 0.45]) {
+      const sx = cx + Math.cos(dir + side) * r * 0.2, sy = cy + Math.sin(dir + side) * r * 0.2;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(sx - ux * r * 0.9 * k, sy - uy * r * 0.9 * k);
+      ctx.stroke();
+    }
+  }
 }
 
 /** Any color as rgba with alpha `a`, for gradients. */
@@ -307,19 +437,47 @@ function hexAlpha(color: string, a: number): string {
   return `rgba(${r},${g},${b},${a})`;
 }
 
-/** Low quality: a translucent circle over each active hitbox. */
-function drawSwipes(ctx: CanvasRenderingContext2D, f: FighterState, color: string, boxes: ReturnType<typeof activeHitboxes>): void {
-  for (const b of boxes) {
-    ctx.fillStyle = 'rgba(255,255,255,0.22)';
-    ctx.strokeStyle = color;
-    ctx.globalAlpha = 0.8;
-    ctx.lineWidth = 2;
+/**
+ * Charging a smash: light streaks drawn in toward the striking limb, and a
+ * twinkle on it that grows with the charge. `t` is render time in ms.
+ */
+function drawCharge(ctx: CanvasRenderingContext2D, f: FighterState, rig: Rig, look: FighterLook, x: number, y: number, charging: number, t: number): void {
+  const hb = FIGHTERS[f.charId]!.moves[f.move]?.hitboxes[0];
+  const s = hb ? nearestStriker(rig, look, hb.x / ONE, hb.y / ONE) : { tip: rig.handF, root: rig.shoulder };
+  const { x: sx, y: sy } = s.tip;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(f.facing, 1);
+  ctx.globalCompositeOperation = gfx.lights ? 'lighter' : 'source-over';
+  ctx.lineCap = 'round';
+  ctx.lineWidth = 2;
+  // Streaks: each slides inward over a 400 ms cycle, staggered, from a new direction every cycle.
+  const count = gfx.trails ? 6 : 3;
+  for (let i = 0; i < count; i++) {
+    const cycle = t / 400 + i / count;
+    const phase = cycle % 1;
+    const ang = i * 2.39996 + Math.floor(cycle) * 1.7;
+    const d0 = (34 + 10 * charging) * (1 - phase), d1 = Math.max(4, d0 - 12);
+    ctx.strokeStyle = `rgba(255,244,190,${((0.3 + 0.6 * charging) * Math.sin(phase * Math.PI)).toFixed(3)})`;
     ctx.beginPath();
-    ctx.arc((f.x + f.facing * b.x) / ONE, (f.y + b.y) / ONE, b.r / ONE, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.moveTo(sx + Math.cos(ang) * d0, sy + Math.sin(ang) * d0);
+    ctx.lineTo(sx + Math.cos(ang) * d1, sy + Math.sin(ang) * d1);
     ctx.stroke();
-    ctx.globalAlpha = 1;
   }
+  // Four-point twinkle on the limb.
+  const size = 5 + 9 * charging + Math.sin(t * 0.03) * 1.5;
+  ctx.fillStyle = `rgba(255,250,220,${(0.55 + 0.4 * charging).toFixed(3)})`;
+  ctx.translate(sx, sy);
+  ctx.rotate(t * 0.004);
+  ctx.beginPath();
+  for (let k = 0; k < 8; k++) {
+    const r = k % 2 === 0 ? size : size * 0.18;
+    const a = (k / 8) * Math.PI * 2;
+    ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
 }
 
 /** Shield bubble: shrinks with shield HP; fades out while being dropped. */

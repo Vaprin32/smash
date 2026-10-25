@@ -57,6 +57,20 @@ interface Burst {
   color: string;
   age: number;
   life: number;
+  /** Launch direction (radians): rays that way are drawn longer. */
+  dir?: number;
+}
+
+/** A tapered streak across a hit, like the cut of a blade. */
+interface Slash {
+  x: number;
+  y: number;
+  angle: number;
+  len: number;
+  width: number;
+  color: string;
+  age: number;
+  life: number;
 }
 
 /** Smash-style KO streak, from where the fighter left toward the middle of the stage. */
@@ -83,6 +97,7 @@ export class Effects {
   private rings: Ring[] = [];
   private bursts: Burst[] = [];
   private beams: Beam[] = [];
+  private slashes: Slash[] = [];
   private seen = new Map<string, number>();
   private shakeMag = 0;
   shakeX = 0;
@@ -113,7 +128,7 @@ export class Effects {
         switch (b.event) {
           case SimEvent.Hit: {
             const speed = Math.abs(b.vx) + Math.abs(b.vy);
-            this.hit(x, mid, dmg, speed / ONE, byColor);
+            this.hit(x, mid, dmg, speed / ONE, byColor, Math.atan2(b.vy, b.vx));
             if (speed > STRONG_HIT_SPEED) this.shake(Math.min(18, speed / ONE - 6));
             this.sfx.hit(dmg, speed / ONE);
             break;
@@ -186,10 +201,13 @@ export class Effects {
     }
   }
 
-  private hit(x: number, y: number, dmg: number, speed: number, color: string): void {
+  /** `dir` is the launch direction (radians, canvas space). */
+  private hit(x: number, y: number, dmg: number, speed: number, color: string, dir: number): void {
     const k = Math.min(1, (dmg + speed) / 30);
-    this.burst(x, y, 20 + dmg * 2.6, color, 170 + k * 90);
-    this.ring(x, y, 8, 30 + dmg * 3.5, 3 + k * 4, '#ffffff', 220 + k * 120);
+    this.burst(x, y, 20 + dmg * 2.6, color, 170 + k * 90, dir);
+    // A blade-like streak across the victim, square to the launch, and a thinner one along it.
+    this.slashes.push({ x, y, angle: dir + Math.PI / 2 + rand(-0.35, 0.35), len: 46 + dmg * 4, width: 5 + k * 6, color, age: 0, life: 200 + k * 100 });
+    if (dmg >= 6) this.slashes.push({ x, y, angle: dir, len: 34 + dmg * 3, width: 3 + k * 3, color: '#ffffff', age: 0, life: 160 + k * 80 });
     this.spray(x, y, 5 + dmg, 'spark', '#fff2b0', 0.3 + k * 0.25, 260);
     if (dmg >= 9) this.spray(x, y, Math.round(dmg / 2), 'debris', color, 0.25 + k * 0.2, 600);
     if (speed > 12) {
@@ -207,8 +225,8 @@ export class Effects {
     this.punch = Math.max(this.punch, 0.06);
   }
 
-  private burst(x: number, y: number, size: number, color: string, life: number): void {
-    this.bursts.push({ x, y, size, rays: 9, turn: Math.random() * TAU, color, age: 0, life });
+  private burst(x: number, y: number, size: number, color: string, life: number, dir?: number): void {
+    this.bursts.push({ x, y, size, rays: 9, turn: Math.random() * TAU, color, age: 0, life, dir });
   }
 
   private ring(x: number, y: number, r0: number, r1: number, width: number, color: string, life: number, dashed = false): void {
@@ -309,6 +327,8 @@ export class Effects {
     this.bursts = this.bursts.filter((b) => b.age < b.life);
     for (const b of this.beams) b.age += dt;
     this.beams = this.beams.filter((b) => b.age < b.life);
+    for (const s of this.slashes) s.age += dt;
+    this.slashes = this.slashes.filter((s) => s.age < s.life);
 
     this.shakeMag *= Math.pow(0.0005, dt / 1000);
     if (this.shakeMag < 0.3) this.shakeMag = 0;
@@ -337,6 +357,33 @@ export class Effects {
       ctx.restore();
     }
     for (const b of this.bursts) this.drawBurst(ctx, b);
+    for (const s of this.slashes) this.drawSlash(ctx, s);
+  }
+
+  private drawSlash(ctx: CanvasRenderingContext2D, s: Slash): void {
+    const t = s.age / s.life;
+    // Cuts across fast (first 30%), then thins out.
+    const open = Math.min(1, t / 0.3);
+    const half = (s.len / 2) * (0.4 + 0.6 * open);
+    const w = s.width * (1 - t);
+    ctx.save();
+    ctx.translate(s.x, s.y);
+    ctx.rotate(s.angle);
+    ctx.globalCompositeOperation = gfx.lights ? 'lighter' : 'source-over';
+    ctx.globalAlpha = 1 - t * t;
+    ctx.fillStyle = s.color;
+    ctx.beginPath();
+    ctx.moveTo(-half, 0);
+    ctx.quadraticCurveTo(0, -w * 1.6, half, 0);
+    ctx.quadraticCurveTo(0, w * 1.6, -half, 0);
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.moveTo(-half * 0.85, 0);
+    ctx.quadraticCurveTo(0, -w * 0.6, half * 0.85, 0);
+    ctx.quadraticCurveTo(0, w * 0.6, -half * 0.85, 0);
+    ctx.fill();
+    ctx.restore();
   }
 
   /** Screen-space overlays (flash). Call after the world, before the HUD. */
@@ -416,7 +463,8 @@ export class Effects {
     ctx.globalAlpha = 1 - t;
     for (let k = 0; k < b.rays; k++) {
       const ang = b.turn + (k / b.rays) * TAU + (k % 2) * 0.2;
-      const len = b.size * (k % 2 === 0 ? 1.6 : 1.05) * (0.6 + ease * 0.7);
+      const ahead = b.dir === undefined ? 0 : Math.max(0, Math.cos(ang - b.dir));
+      const len = b.size * (k % 2 === 0 ? 1.6 : 1.05) * (0.6 + ease * 0.7) * (1 + ahead * ahead);
       const inner = b.size * 0.25 * ease;
       const wdt = b.size * 0.09 * (1 - t);
       const cx = Math.cos(ang), cy = Math.sin(ang);

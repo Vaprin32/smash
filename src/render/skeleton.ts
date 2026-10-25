@@ -56,7 +56,7 @@ export function mixPose(a: Pose, b: Pose, t: number): Pose {
   };
 }
 
-interface Pt {
+export interface Pt {
   x: number;
   y: number;
 }
