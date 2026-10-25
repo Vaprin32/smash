@@ -79,13 +79,13 @@ Every solid block's top corners are ledges.
 
 | Fighter | Archetype | Smash attacks (K: forward / up / down) | Specials (I: neutral, side, up, down) |
 |---|---|---|---|
-| Wisp | fast, light, floaty | Gale Palm / Whirlwind / Sweeping Gust | Wind Bolt, Gust Dash, Updraft, Mirror Guard (counter) |
-| Brick | heavy, slow, hard-hitting | Gauntlet Hook / Helm Bash / Tremor Stomp | Gauntlet Toss, Bull Rush, Rocket Fist, Ground Pound |
-| Pip | tiny featherweight, three air jumps | Sling Snap / Sky Shot / Pebble Scatter | Pebble Toss, Tumble, Pinwheel, Spring (extra jump) |
-| Kestrel | fast-faller rushdown | Talon Thrust / Wing Flare / Spur Sweep | Feather Dart, Dive Kick, Skyward, Plummet (spike) |
-| Lumen | floaty zoner | Censer Swing / Halo / Twin Pillars | Lumen Orb, Light Lance (tipper), Ascend, Flare |
-| Basalt | giant super-heavyweight, worst recovery | Boulder Fist / Lava Crown / Twin Quake | Eruption, Landslide, Magma Leap, Seismic Slam |
-| Sable | long reach (sword) | Overhead Cleave / Rising Arc / Ankle Sweep | Crescent Wave, Lunge (tipper), Rising Blade, Whirl Slash |
+| Wisp | fast, light, floaty | Gale Palm / Whirlwind / Sweeping Gust | Wind Bolt, Gust Dash, Updraft, Drill Dive |
+| Brick | heavy, slow, hard-hitting | Gauntlet Hook / Helm Bash / Tremor Stomp | Gauntlet Toss, Bull Rush, Rocket Fist, Drill Dive |
+| Pip | tiny featherweight, three air jumps | Sling Snap / Sky Shot / Pebble Scatter | Pebble Toss, Tumble, Pinwheel, Drill Dive |
+| Kestrel | fast-faller rushdown | Talon Thrust / Wing Flare / Spur Sweep | Feather Dart, Dive Kick, Skyward, Drill Dive |
+| Lumen | floaty zoner | Censer Swing / Halo / Twin Pillars | Lumen Orb, Light Lance (tipper), Ascend, Drill Dive |
+| Basalt | giant super-heavyweight, worst recovery | Boulder Fist / Lava Crown / Twin Quake | Eruption, Landslide, Magma Leap, Drill Dive |
+| Sable | long reach (sword) | Overhead Cleave / Rising Arc / Ankle Sweep | Crescent Wave, Lunge (tipper), Rising Blade, Drill Dive |
 | Rook | all-rounder | Heavy Kick / Rising Palm / Sweep Kick | Palm Burst, Spin Kick, Rising Uppercut, Riposte (counter) |
 
 Every fighter's smash attacks and specials are their own, and no special repeats one of that
@@ -130,8 +130,14 @@ from one key to the other never stops you in between.
 | Dash | N | LB |
 
 Attack: jab combo, tilts, dash attack on the ground; aerials in the air. Smash: forward / up / down
-smash (hold to charge); up smash also reaches straight up through the platform overhead, so it hits
+smash (hold to charge: full power after 1 s, then it can be held 2.5 s more before it goes off by
+itself); up smash also reaches straight up through the platform overhead, so it hits
 someone standing on it. Special + direction: neutral / side / up (recovery) / down special.
+
+**Drill Dive** (down special, every fighter but Rook, who keeps the Riposte counter): a quick
+hop from the ground (a short stall in the air), then a feet-first dive down and forward that hits
+over and over, and a finishing burst when it touches down. Once per airtime. If it hasn't hit
+anything by its 22nd frame, a jump cancels it (using an air jump if one is left).
 Down on a platform drops through it, and holding down while falling passes through platforms
 instead of landing on them.
 
@@ -232,10 +238,20 @@ watched again from the main menu.
 
 ### Running it locally
 
+On Windows, double-click **`start-server.cmd`**: it checks Node (22.18+ needed), installs the
+packages on first run, starts the server and prints the addresses to use. It runs `node` directly,
+so PowerShell's script policy (`npm.ps1 cannot be loaded`) can't get in the way. Otherwise:
+
 ```bash
-npm run server   # terminal 1: ws://localhost:8787
+npm install      # once
+npm run server   # terminal 1: ws://localhost:8787 (in PowerShell, `npm.cmd run server` if npm.ps1 is blocked)
 npm run dev      # terminal 2 (or open dist/index.html from disk)
 ```
+
+To play with a friend on another network without hosting anything, a free tunnel gives the local
+server a public `wss://` address: run `cloudflared tunnel --url http://localhost:8787` and open
+`https://vaprin32.github.io/smash/?signal=wss://<the-name>.trycloudflare.com`; the join link the
+game shows carries that address to your friend.
 
 Open the game in two browser windows (or two browsers), create a room in one and join from the
 other. To play on two machines on the same network, run `npm run dev -- --host` and open
@@ -250,7 +266,7 @@ from disk).
   (GitHub Pages already publishes it; see above). Build with `VITE_SIGNAL_URL=wss://your-server`
   to point it at your signaling server.
 - **Signaling server:** any small Node 24 host (it runs the TypeScript directly). `npm ci`, then
-  `PORT=8787 npm run server`. Pages served over https may only open `wss://` connections, so put it
+  `npm run server` (port from the `PORT` environment variable, default 8787). Pages served over https may only open `wss://` connections, so put it
   behind TLS, e.g. a reverse proxy (Caddy, nginx) or a platform that terminates TLS for you.
 - **TURN (optional):** players behind strict NATs or firewalls can't always connect directly; the
   game then says "Couldn't connect to the other player". A TURN server relays their traffic. Give
