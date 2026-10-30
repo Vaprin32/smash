@@ -319,8 +319,16 @@ function castleArt(): CastleArt {
   g.closePath();
   g.fill();
 
+  // Windows are drawn last, all at once, so one window's glow can't wash over
+  // another. A block drawn in front of a window hides it.
+  const windows: { x: number; y: number; ww: number; wh: number; lit: boolean }[] = [];
+
   /** A block of masonry: lit on its right edge, with faint courses. */
   const block = (x: number, y: number, bw: number, bh: number) => {
+    for (let i = windows.length - 1; i >= 0; i--) {
+      const wn = windows[i]!;
+      if (wn.x < x + bw && wn.x + wn.ww > x && wn.y < y + bh && wn.y + wn.wh > y) windows.splice(i, 1);
+    }
     const grad = g.createLinearGradient(x, 0, x + bw, 0);
     grad.addColorStop(0, DARK);
     grad.addColorStop(0.6, WALL);
@@ -340,21 +348,44 @@ function castleArt(): CastleArt {
     for (let mx = x; mx < x + bw - 4; mx += 14) block(mx, y - 9, Math.min(8, x + bw - mx), 9);
   };
   const window_ = (x: number, y: number, ww: number, wh: number, lit: boolean) => {
-    if (lit) {
-      const glow = g.createRadialGradient(x + ww / 2, y + wh / 2, 0, x + ww / 2, y + wh / 2, wh * 2.2);
-      glow.addColorStop(0, 'rgba(255,190,100,0.35)');
+    windows.push({ x, y, ww, wh, lit });
+  };
+  /** An arched opening, `pad` larger than the window on every side. */
+  const arch = (x: number, y: number, ww: number, wh: number, pad: number) => {
+    g.beginPath();
+    g.moveTo(x - pad, y + wh + pad);
+    g.lineTo(x - pad, y + ww / 2);
+    g.arc(x + ww / 2, y + ww / 2, ww / 2 + pad, Math.PI, 0);
+    g.lineTo(x + ww + pad, y + wh + pad);
+    g.closePath();
+  };
+  const drawWindows = () => {
+    // A soft halo, kept tight so it stays on the stonework.
+    g.globalCompositeOperation = 'lighter';
+    for (const { x, y, ww, wh, lit } of windows) {
+      if (!lit) continue;
+      const cx = x + ww / 2, cy = y + wh / 2, rad = wh * 0.9;
+      const glow = g.createRadialGradient(cx, cy, 0, cx, cy, rad);
+      glow.addColorStop(0, 'rgba(255,170,80,0.28)');
       glow.addColorStop(1, 'rgba(255,170,80,0)');
       g.fillStyle = glow;
-      g.fillRect(x - wh * 2, y - wh * 2, ww + wh * 4, wh * 5);
+      g.fillRect(cx - rad, cy - rad, rad * 2, rad * 2);
     }
-    g.fillStyle = lit ? '#ffcf7a' : '#151222';
-    g.beginPath();
-    g.moveTo(x, y + wh);
-    g.lineTo(x, y + ww / 2);
-    g.arc(x + ww / 2, y + ww / 2, ww / 2, Math.PI, 0);
-    g.lineTo(x + ww, y + wh);
-    g.closePath();
-    g.fill();
+    g.globalCompositeOperation = 'source-over';
+    for (const { x, y, ww, wh, lit } of windows) {
+      // Stone surround, then the pane, then a dark mullion and transom.
+      g.fillStyle = '#1d1929';
+      arch(x, y, ww, wh, 1.2);
+      g.fill();
+      g.fillStyle = lit ? '#ffcf7a' : '#100d1a';
+      arch(x, y, ww, wh, 0);
+      g.fill();
+      if (lit) {
+        g.fillStyle = 'rgba(150,80,30,0.7)';
+        g.fillRect(x + ww / 2 - 0.6, y + 1, 1.2, wh - 1);
+        g.fillRect(x, y + wh * 0.55, ww, 1.1);
+      }
+    }
   };
   const cone = (cx: number, y: number, bw: number, rh: number) => {
     const grad = g.createLinearGradient(cx - bw / 2, 0, cx + bw / 2, 0);
@@ -396,7 +427,9 @@ function castleArt(): CastleArt {
   battlements(-380, -95, 760);
   for (let x = -350; x < 350; x += 46) if (r() < 0.5) window_(x, -70, 7, 12, r() < 0.4);
   tower(-60, 26, 300, 80); // slender spire
-  tower(0, 130, 235, 0); // keep
+  // The keep, with its own grid of windows.
+  block(-65, -235, 130, 235);
+  battlements(-68, -235, 136);
   block(-20, -295, 40, 60);
   cone(0, -295, 40, 70);
   for (let wy = -205; wy < -40; wy += 34) for (const wx of [-44, -10, 24]) window_(wx, wy, 9, 16, r() < 0.5);
@@ -407,6 +440,7 @@ function castleArt(): CastleArt {
   // Gatehouse with an arched gate and a warm glow inside.
   block(70, -118, 84, 118);
   battlements(68, -118, 88);
+  drawWindows();
   g.fillStyle = '#120e18';
   g.beginPath();
   g.moveTo(94, 0);
@@ -521,18 +555,30 @@ function house(g: Ctx, x: number, y: number, r: () => number): void {
     g.lineTo(x + hw + 5 - k * 2, y - hh - (roof * k) / 6);
     g.stroke();
   }
-  // Chimney and a lit window or two.
+  // Chimney and a lit window or two, in the panel below the middle beam.
   g.fillStyle = '#2a2224';
   g.fillRect(x + hw * 0.7, y - hh - roof * 0.8, 5, roof * 0.6);
+  const winH = Math.min(7, hh / 2 - 4), winY = y - hh / 2 + 2;
   for (const wx of [x + hw * 0.22, x + hw * 0.62]) {
     if (r() < 0.25) continue;
-    const glow = g.createRadialGradient(wx + 3, y - hh * 0.35, 0, wx + 3, y - hh * 0.35, 22);
+    // The glow stays on this house's wall.
+    g.save();
+    g.beginPath();
+    g.rect(x, y - hh, hw, hh);
+    g.clip();
+    const cx = wx + 3, cy = winY + winH / 2;
+    const glow = g.createRadialGradient(cx, cy, 0, cx, cy, 12);
     glow.addColorStop(0, 'rgba(255,180,90,0.4)');
     glow.addColorStop(1, 'rgba(255,170,80,0)');
     g.fillStyle = glow;
-    g.fillRect(wx - 20, y - hh - 20, 46, 46);
+    g.fillRect(cx - 12, cy - 12, 24, 24);
+    g.restore();
+    g.fillStyle = '#1e1618';
+    g.fillRect(wx - 1, winY - 1, 8, winH + 2);
     g.fillStyle = '#ffc56e';
-    g.fillRect(wx, y - hh * 0.55, 6, 7);
+    g.fillRect(wx, winY, 6, winH);
+    g.fillStyle = 'rgba(120,60,25,0.8)';
+    g.fillRect(wx + 2.5, winY, 1, winH);
   }
 }
 
