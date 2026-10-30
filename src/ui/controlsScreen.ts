@@ -87,8 +87,10 @@ export class ControlsScreen implements Screen {
       this.row = (this.row + (down ? 1 : -1) + BACK_ROW + 1) % (BACK_ROW + 1);
       this.app.sfx.move();
     }
-    if (side && this.row < ROWS.length) {
-      this.col = 1 - this.col;
+    if (side) {
+      // Reset and Back sit side by side, so left / right moves between them.
+      if (this.row < ROWS.length) this.col = 1 - this.col;
+      else this.row = this.row === RESET_ROW ? BACK_ROW : RESET_ROW;
       this.app.sfx.move();
     }
     if (!(m.confirm || c.confirmKey || c.startButton)) return;
